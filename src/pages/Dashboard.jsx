@@ -8,20 +8,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [marketQuotes, setMarketQuotes] = useState({})
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     const symbols = Object.keys(mockStocks)
 
-    Promise.all(symbols.map(async symbol => {
-      try {
-        return await stockService.getStockData(symbol)
-      } catch {
-        return mockStocks[symbol]
-      }
-    })).then(results => {
+    stockService.getMultipleStocks(symbols).then(results => {
       if (!cancelled) {
-        setStocks(results)
+        const bySymbol = Object.fromEntries(results.map(stock => [stock.symbol, stock]))
+        setStocks(symbols.map(symbol => bySymbol[symbol] || mockStocks[symbol]))
         setLoading(false)
       }
     }).catch(fetchError => {
@@ -34,26 +30,26 @@ export default function Dashboard() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKey])
 
   useEffect(() => {
     let cancelled = false
     const universe = getMarketUniverse()
 
-    Promise.all(universe.map(async instrument => {
-      try {
-        return [instrument.symbol, { ...instrument, ...(await stockService.getStockData(instrument.symbol)) }]
-      } catch {
-        return [instrument.symbol, instrument]
+    stockService.getMultipleStocks(universe.map(instrument => instrument.symbol)).then(results => {
+      if (!cancelled) {
+        const bySymbol = Object.fromEntries(results.map(result => [result.symbol, result]))
+        setMarketQuotes(Object.fromEntries(universe.map(instrument => [
+          instrument.symbol,
+          { ...instrument, ...(bySymbol[instrument.symbol] || {}) }
+        ])))
       }
-    })).then(entries => {
-      if (!cancelled) setMarketQuotes(Object.fromEntries(entries))
     })
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKey])
 
   const selected = stocks.find(stock => stock.symbol === selectedStock) || mockStocks[selectedStock]
   const quote = (instrument) => marketQuotes[instrument.symbol] || instrument
@@ -89,7 +85,17 @@ export default function Dashboard() {
         </div>
         <div className="text-left lg:text-right">
           <p className="text-xs text-slate-500">Última actualización</p>
-          <p className="text-sm text-slate-300">{loading ? 'Sincronizando...' : 'Datos públicos disponibles'}</p>
+          <div className="flex items-center gap-3 lg:justify-end">
+            <p className="text-sm text-slate-300">{loading ? 'Sincronizando...' : 'Datos públicos disponibles'}</p>
+            <button
+              type="button"
+              onClick={() => setRefreshKey(value => value + 1)}
+              disabled={loading}
+              className="px-3 py-1.5 text-xs rounded-md border border-slate-700 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-300 disabled:opacity-50 transition-colors"
+            >
+              ↻ Actualizar
+            </button>
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -196,8 +202,9 @@ export default function Dashboard() {
             <p className="text-2xl font-bold">14.32</p>
             <p className="text-green-400 text-sm">-2.15%</p>
           </div>
+        </div>
 
-          <section className="mt-6">
+        <section className="mt-6">
             <div className="flex items-end justify-between gap-4 mb-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">Global markets</p>
@@ -208,9 +215,9 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
               {marketUniverse.global.map(renderQuoteCard)}
             </div>
-          </section>
+        </section>
 
-          <section className="mt-8">
+        <section className="mt-8">
             <div className="mb-4">
               <p className="text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">Argentina</p>
               <h3 className="text-xl font-semibold text-white">MERVAL, ADRs y bonos</h3>
@@ -233,9 +240,9 @@ export default function Dashboard() {
                 {marketUniverse.argentina.bonds.map(renderQuoteCard)}
               </div>
             </div>
-          </section>
+        </section>
 
-          <section className="mt-8">
+        <section className="mt-8">
             <div className="mb-4">
               <p className="text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">Estados Unidos</p>
               <h3 className="text-xl font-semibold text-white">20 empresas destacadas del S&P 500</h3>
@@ -243,8 +250,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {marketUniverse.sp500.map(renderQuoteCard)}
             </div>
-          </section>
-        </div>
+        </section>
       </div>
     </div>
   )

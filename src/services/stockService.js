@@ -75,13 +75,23 @@ export const stockService = {
   },
 
   async getMultipleStocks(symbols) {
-    try {
-      const promises = symbols.map(sym => this.getStockData(sym))
-      return await Promise.all(promises)
-    } catch (error) {
-      console.error('Error fetching multiple stocks:', error)
-      throw error
+    const results = []
+    const concurrency = 6
+
+    for (let index = 0; index < symbols.length; index += concurrency) {
+      const batch = symbols.slice(index, index + concurrency)
+      const batchResults = await Promise.all(batch.map(async symbol => {
+        try {
+          return await this.getStockData(symbol)
+        } catch (error) {
+          console.warn(`No se pudo actualizar ${symbol}:`, error.message)
+          return null
+        }
+      }))
+      results.push(...batchResults.filter(Boolean))
     }
+
+    return results
   }
 }
 
