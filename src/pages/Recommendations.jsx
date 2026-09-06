@@ -25,9 +25,31 @@ const ideas = [
 
 const riskClass = { Bajo: 'text-emerald-400 bg-emerald-500/10', Moderado: 'text-amber-300 bg-amber-500/10', Alto: 'text-rose-400 bg-rose-500/10' }
 
+const checklistByType = {
+  Acción: [
+    ['Tesis', '¿Podés explicar en una frase cómo gana dinero la empresa y cuál es su ventaja competitiva?', 'Revisá crecimiento de ingresos, márgenes, flujo de caja y posición frente a competidores.'],
+    ['Valoración', '¿El precio actual deja margen de seguridad frente a tus supuestos?', 'Contrastá P/E, crecimiento esperado, flujo de caja y múltiplos de empresas comparables.'],
+    ['Riesgo', '¿Qué evento podría invalidar la tesis?', 'Considerá deuda, regulación, concentración de clientes, competencia, moneda y volatilidad.'],
+    ['Catalizadores', '¿Qué dato futuro confirmaría o debilitaría la idea?', 'Definí resultados, lanzamientos, guidance, cambios regulatorios o métricas operativas concretas.']
+  ],
+  ADR: [
+    ['Tesis', '¿Qué exposición argentina o sectorial estás comprando a través del ADR?', 'Separá el desempeño de la empresa del riesgo país, tipo de cambio, regulación y liquidez.'],
+    ['Valoración', '¿La cotización compensa la volatilidad y el riesgo de mercado donde opera?', 'Compará múltiplos, crecimiento, deuda y valuación con pares regionales e internacionales.'],
+    ['Riesgo', '¿Qué impacto tendrían una devaluación, controles o cambios regulatorios?', 'Revisá jurisdicción, liquidez del ADR, deuda, ingresos en moneda extranjera y riesgo político.'],
+    ['Catalizadores', '¿Qué cambio operativo o macroeconómico podría mejorar la cotización?', 'Anotá resultados, tarifas, producción, crédito, commodities, elecciones o reformas relevantes.']
+  ],
+  Bono: [
+    ['Tesis', '¿Qué función cumple el bono en tu cartera: renta, cobertura o recuperación de capital?', 'Definí moneda, vencimiento, flujo de pagos y si buscás mantenerlo o venderlo antes.'],
+    ['Valoración', '¿La paridad y el rendimiento compensan el riesgo asumido?', 'Compará precio, TIR, duration, ley aplicable, cupón y alternativas con vencimientos similares.'],
+    ['Riesgo', '¿Qué ocurre si suben las tasas, cambia la inflación o se deteriora el crédito?', 'Medí duration, riesgo de default, liquidez, moneda y sensibilidad a escenarios adversos.'],
+    ['Catalizadores', '¿Qué evento podría mover la paridad o comprimir el spread?', 'Seguí pagos, canjes, resultado fiscal, reservas, riesgo país y cambios en la curva soberana.']
+  ]
+}
+
 export default function Recommendations() {
   const [filter, setFilter] = useState('Todas')
   const [selected, setSelected] = useState(null)
+  const [checklist, setChecklist] = useState({})
   const filters = ['Todas', 'Acciones', 'ADR argentinos', 'Bonos', 'Calidad', 'Crecimiento', 'Valor', 'Renta fija', 'Bajo riesgo']
   const filteredIdeas = useMemo(() => ideas.filter(idea => filter === 'Todas' || (filter === 'Acciones' && idea.type === 'Acción') || (filter === 'ADR argentinos' && idea.type === 'ADR') || (filter === 'Bonos' && idea.type === 'Bono') || idea.profile === filter || (filter === 'Bajo riesgo' && idea.risk === 'Bajo')), [filter])
 
@@ -55,15 +77,17 @@ export default function Recommendations() {
             <div className="grid grid-cols-3 gap-2 mt-5"><div><p className="text-xs text-slate-500">Precio</p><p className="text-white font-semibold">{stock.price ? `$${stock.price}` : 'Consultar'}</p></div><div><p className="text-xs text-slate-500">{idea.type === 'Bono' ? 'Moneda' : idea.type === 'ADR' ? 'Mercado' : 'P/E'}</p><p className="text-white font-semibold">{idea.type === 'Bono' ? 'ARS / USD' : idea.type === 'ADR' ? 'NYSE / Nasdaq' : (stock.pe || 'N/D')}</p></div><div><p className="text-xs text-slate-500">Cambio</p><p className={stock.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{stock.changePercent == null ? 'N/D' : `${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent}%`}</p></div></div>
             <p className="text-sm text-slate-300 leading-relaxed mt-5">{idea.thesis}</p>
             <div className="flex flex-wrap gap-2 mt-4">{idea.tags.map(tag => <span key={tag} className="text-xs px-2 py-1 rounded bg-slate-900 text-slate-400">{tag}</span>)}<span className="text-xs px-2 py-1 rounded bg-slate-900 text-slate-400">{idea.horizon}</span></div>
-            <button onClick={() => setSelected({ ...idea, stock, upside })} className="w-full mt-5 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-cyan-500 hover:text-slate-950 font-medium transition-colors">Ver tesis y checklist</button>
+            <button onClick={() => { setSelected({ ...idea, stock, upside }); setChecklist({}) }} className="w-full mt-5 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-cyan-500 hover:text-slate-950 font-medium transition-colors">Ver tesis y checklist</button>
           </article>
         })}
       </section>
 
       {selected && <section className="border border-cyan-500/30 rounded-2xl bg-cyan-500/5 p-6 mb-10">
-        <div className="flex justify-between items-start"><div><p className="text-xs uppercase tracking-wider text-cyan-300">Checklist de investigación</p><h3 className="text-2xl text-white font-semibold mt-2">{selected.symbol} · {selected.profile}</h3></div><button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white">×</button></div>
-        <p className="text-slate-300 mt-4 max-w-3xl">{selected.thesis}</p>
-        <div className="grid md:grid-cols-4 gap-3 mt-5">{[['Tesis', selected.type === 'Bono' ? '¿Qué necesidad de renta fija cubre?' : '¿Qué motor puede hacer crecer el negocio?'], ['Valoración', selected.type === 'Bono' ? '¿La paridad y tasa compensan el riesgo?' : '¿El precio contempla demasiado optimismo?'], ['Riesgos', selected.type === 'Bono' ? '¿Qué pasa con duration, moneda y default?' : '¿Qué escenario invalida la idea?'], ['Catalizadores', selected.type === 'Bono' ? '¿Qué dato puede mover la curva?' : '¿Qué dato debería mejorar para confirmarla?']].map(([title, text]) => <div key={title} className="bg-slate-900/60 rounded-lg p-4"><p className="text-cyan-300 font-semibold">{title}</p><p className="text-sm text-slate-400 mt-2">{text}</p></div>)}</div>
+        <div className="flex justify-between items-start"><div><p className="text-xs uppercase tracking-wider text-cyan-300">Evaluación guiada · {selected.type}</p><h3 className="text-2xl text-white font-semibold mt-2">{selected.symbol} · {selected.profile}</h3></div><button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white">×</button></div>
+        <div className="mt-5 border border-slate-800 bg-slate-900/50 rounded-xl p-4"><p className="text-xs uppercase tracking-wider text-slate-500">Tesis de trabajo</p><p className="text-white leading-relaxed mt-2">{selected.thesis}</p><p className="text-sm text-slate-400 mt-3">Antes de decidir, escribí qué tendría que ocurrir para que esta tesis sea correcta y qué evidencia te haría cambiar de opinión.</p></div>
+        <div className="flex items-center justify-between mt-6 mb-3"><div><h4 className="text-lg font-semibold text-white">Checklist de decisión</h4><p className="text-sm text-slate-400">Marcá cada eje solo cuando hayas verificado la información.</p></div><span className="text-sm text-cyan-300">{Object.values(checklist).filter(Boolean).length}/4 completos</span></div>
+        <div className="space-y-3">{(checklistByType[selected.type] || checklistByType.Acción).map(([title, question, guidance]) => <div key={title} className={`border rounded-xl p-4 ${checklist[title] ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/40'}`}><div className="flex items-start gap-3"><input type="checkbox" checked={Boolean(checklist[title])} onChange={event => setChecklist({ ...checklist, [title]: event.target.checked })} className="mt-1 accent-emerald-400" /><div className="flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-white">{title}</p><span className="text-xs text-slate-500">{checklist[title] ? 'Verificado' : 'Pendiente'}</span></div><p className="text-sm text-slate-300 mt-2">{question}</p><p className="text-xs text-slate-500 mt-2">Guía: {guidance}</p></div></div></div>)}</div>
+        <div className="grid md:grid-cols-3 gap-3 mt-6"><div className="bg-slate-900/60 rounded-lg p-4"><p className="text-xs text-slate-500">Preparación</p><p className="text-xl font-semibold text-white mt-1">{Object.values(checklist).filter(Boolean).length < 4 ? 'En análisis' : 'Checklist completo'}</p></div><div className="bg-slate-900/60 rounded-lg p-4"><p className="text-xs text-slate-500">Riesgo declarado</p><p className={`text-xl font-semibold mt-1 ${riskClass[selected.risk].split(' ')[0]}`}>{selected.risk}</p></div><div className="bg-slate-900/60 rounded-lg p-4"><p className="text-xs text-slate-500">Horizonte</p><p className="text-xl font-semibold text-white mt-1">{selected.horizon}</p></div></div>
         {selected.upside != null && <p className="text-xs text-slate-500 mt-5">El potencial orientativo calculado no es un precio objetivo ni una promesa de rendimiento: {selected.upside >= 0 ? '+' : ''}{selected.upside.toFixed(1)}%.</p>}
       </section>}
 
