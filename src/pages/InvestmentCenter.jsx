@@ -6,7 +6,7 @@ import TransactionHistory from './TransactionHistory'
 
 const tabs = [
   ['portfolio', 'Mi portafolio'],
-  ['trading', 'Operar'],
+  ['trading', 'Comprar y vender'],
   ['companies', 'Empresas'],
   ['history', 'Historial']
 ]
