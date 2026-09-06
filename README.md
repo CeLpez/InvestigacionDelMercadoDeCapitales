@@ -29,6 +29,7 @@ Una plataforma completa para monitorear, analizar e invertir en el mercado de ca
 - **Gráficos**: Chart.js + react-chartjs-2
 - **Estado**: Zustand
 - **API de Datos**: Yahoo Finance (público, sin API key)
+- **Usuarios y nube**: Supabase (opcional, con fallback local)
 - **Utilidades**: Axios, date-fns
 
 ## 📦 Instalación
@@ -143,6 +144,15 @@ Con Zustand puedes:
 - Guardar portafolio persistentemente
 - Mantener lista de seguimiento (watchlist)
 - Sincronizar datos entre páginas
+
+## 🔐 Configuración opcional de Supabase
+
+1. Crea un proyecto en Supabase.
+2. Ejecuta `supabase/schema.sql` en el SQL Editor.
+3. Copia `.env.example` a `.env.local`.
+4. Completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
+
+El cliente de Supabase queda disponible en `src/services/supabaseClient.js` y las operaciones de autenticación en `src/services/authService.js`. Si las variables están vacías, la aplicación continúa funcionando con persistencia local.
 
 ## 🚀 Próximas Características Potenciales
 
