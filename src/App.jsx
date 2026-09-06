@@ -7,6 +7,7 @@ import CompetitorComparison from './pages/CompetitorComparison'
 import SectorAnalysis from './pages/SectorAnalysis'
 import Portfolio from './pages/Portfolio'
 import TradingSimulator from './pages/TradingSimulator'
+import InvestmentCenter from './pages/InvestmentCenter'
 import Recommendations from './pages/Recommendations'
 import PriceAlerts from './pages/PriceAlerts'
 import TransactionHistory from './pages/TransactionHistory'
@@ -48,6 +49,7 @@ export default function App() {
     sectors: <SectorAnalysis />,
     portfolio: <Portfolio />,
     trading: <TradingSimulator />,
+    center: <InvestmentCenter />,
     recommendations: <Recommendations />,
     alerts: <PriceAlerts />,
     history: <TransactionHistory />,

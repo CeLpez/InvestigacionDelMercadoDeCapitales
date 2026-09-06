@@ -3,13 +3,10 @@ import React from 'react'
 export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignOut }) {
   const navItems = [
     { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'search', label: '🔍 Buscar' },
+    { id: 'center', label: '💼 Centro de inversión' },
     { id: 'education', label: '📚 Educación' },
     { id: 'comparison', label: '⚖️ Comparar' },
     { id: 'sectors', label: '🏢 Sectores' },
-    { id: 'portfolio', label: '💼 Portafolio' },
-    { id: 'trading', label: '🧾 Comprar' },
-    { id: 'history', label: '📜 Historial' },
     { id: 'alerts', label: '🔔 Alertas' },
     { id: 'simulator', label: '📈 Simulador' },
     { id: 'news', label: '📰 Noticias' },
