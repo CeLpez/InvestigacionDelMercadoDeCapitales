@@ -2,7 +2,13 @@ import React, { useState } from 'react'
 import { mockStocks } from '../services/stockService'
 
 export default function PriceAlerts() {
-  const [alerts, setAlerts] = useState([])
+  const [alerts, setAlerts] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('capital-markets-alerts') || '[]')
+    } catch {
+      return []
+    }
+  })
   const [showForm, setShowForm] = useState(false)
   const [selectedSymbol, setSelectedSymbol] = useState('AAPL')
   const [targetPrice, setTargetPrice] = useState('')
@@ -29,6 +35,10 @@ export default function PriceAlerts() {
   const removeAlert = (id) => {
     setAlerts(alerts.filter(a => a.id !== id))
   }
+
+  React.useEffect(() => {
+    localStorage.setItem('capital-markets-alerts', JSON.stringify(alerts))
+  }, [alerts])
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

@@ -1,8 +1,16 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 export default function TransactionHistory() {
   // Mock transaction history
-  const [transactions] = useState([
+  const [transactions] = useState(() => {
+    try {
+      const stored = localStorage.getItem('capital-markets-transactions')
+      if (stored) return JSON.parse(stored)
+    } catch {
+      // Use the demo history when stored data is unavailable or invalid.
+    }
+
+    return [
     {
       id: 1,
       symbol: 'AAPL',
@@ -63,10 +71,15 @@ export default function TransactionHistory() {
       date: '2026-09-05 13:30',
       status: 'Completada'
     }
-  ])
+    ]
+  })
 
   const [filterType, setFilterType] = useState('ALL')
   const [filterSymbol, setFilterSymbol] = useState('ALL')
+
+  useEffect(() => {
+    localStorage.setItem('capital-markets-transactions', JSON.stringify(transactions))
+  }, [transactions])
 
   const filteredTransactions = transactions.filter(t => {
     const typeMatch = filterType === 'ALL' || t.type === filterType

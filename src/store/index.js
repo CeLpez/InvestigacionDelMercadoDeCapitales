@@ -1,6 +1,7 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-export const usePortfolioStore = create((set, get) => ({
+export const usePortfolioStore = create(persist((set, get) => ({
   portfolio: [],
   watchlist: [],
 
@@ -35,12 +36,16 @@ export const usePortfolioStore = create((set, get) => ({
     const initialValue = portfolio.reduce((total, stock) => total + (stock.purchasePrice * stock.quantity), 0)
     return currentValue - initialValue
   }
+}), {
+  name: 'capital-markets-portfolio'
 }))
 
-export const useMarketStore = create((set) => ({
+export const useMarketStore = create(persist((set) => ({
   selectedStocks: [],
   marketTrends: {},
   
   setSelectedStocks: (stocks) => set({ selectedStocks: stocks }),
   setMarketTrends: (trends) => set({ marketTrends: trends })
+}), {
+  name: 'capital-markets-market'
 }))

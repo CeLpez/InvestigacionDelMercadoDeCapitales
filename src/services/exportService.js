@@ -35,7 +35,7 @@ export const exportPortfolioToCSV = (portfolio, filename = 'portafolio.csv') => 
   data.push(['Valor Total', '', '', '', '', '', totalValue.toFixed(2), '', '', ''])
   data.push(['Costo Total', '', '', '', '', '', totalCost.toFixed(2), '', '', ''])
   data.push(['Ganancia Total', '', '', '', '', '', totalGain.toFixed(2), '', '', ''])
-  data.push(['Retorno Total %', '', '', '', '', '', '', '', '', ((totalGain / totalCost) * 100).toFixed(2)]]
+  data.push(['Retorno Total %', '', '', '', '', '', '', '', '', ((totalGain / totalCost) * 100).toFixed(2)])
 
   let csvContent = 'data:text/csv;charset=utf-8,'
   csvContent += headers.join(',') + '\n'
