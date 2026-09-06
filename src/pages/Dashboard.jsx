@@ -1,11 +1,41 @@
-import React, { useState, useEffect } from 'react'
-import { mockStocks } from '../services/stockService'
-import StockCard from '../components/StockCard'
+import React, { useEffect, useState } from 'react'
+import { mockStocks, stockService } from '../services/stockService'
 import PriceChart from '../components/PriceChart'
 
 export default function Dashboard() {
   const [selectedStock, setSelectedStock] = useState('AAPL')
-  const topStocks = Object.values(mockStocks).slice(0, 5)
+  const [stocks, setStocks] = useState(Object.values(mockStocks))
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    const symbols = Object.keys(mockStocks)
+
+    Promise.all(symbols.map(async symbol => {
+      try {
+        return await stockService.getStockData(symbol)
+      } catch {
+        return mockStocks[symbol]
+      }
+    })).then(results => {
+      if (!cancelled) {
+        setStocks(results)
+        setLoading(false)
+      }
+    }).catch(fetchError => {
+      if (!cancelled) {
+        setError(fetchError.message || 'No se pudo cargar el mercado')
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const selected = stocks.find(stock => stock.symbol === selectedStock) || mockStocks[selectedStock]
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -15,8 +45,8 @@ export default function Dashboard() {
           <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">{selectedStock}</h2>
-              <span className="text-3xl font-bold text-green-400">
-                ${mockStocks[selectedStock].price.toFixed(2)}
+              <span className={`text-3xl font-bold ${selected.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${selected.price.toFixed(2)}
               </span>
             </div>
             <PriceChart symbol={selectedStock} />
@@ -24,16 +54,16 @@ export default function Dashboard() {
               <div className="bg-slate-900/50 p-3 rounded">
                 <p className="text-slate-400">Cambio</p>
                 <p className="text-lg font-bold text-green-400">
-                  +{mockStocks[selectedStock].change}%
+                  {selected.change >= 0 ? '+' : ''}{selected.changePercent.toFixed(2)}%
                 </p>
               </div>
               <div className="bg-slate-900/50 p-3 rounded">
                 <p className="text-slate-400">P/E Ratio</p>
-                <p className="text-lg font-bold">{mockStocks[selectedStock].pe}</p>
+                <p className="text-lg font-bold">{selected.pe ?? 'N/D'}</p>
               </div>
               <div className="bg-slate-900/50 p-3 rounded">
                 <p className="text-slate-400">Dividendo</p>
-                <p className="text-lg font-bold">${mockStocks[selectedStock].dividend}</p>
+                <p className="text-lg font-bold">{selected.dividend == null ? 'N/D' : `$${selected.dividend}`}</p>
               </div>
             </div>
           </div>
@@ -42,8 +72,10 @@ export default function Dashboard() {
         {/* Stocks destacados */}
         <div>
           <h3 className="text-xl font-bold mb-4">Principales Acciones</h3>
+          {loading && <p className="text-sm text-slate-400 mb-3">Actualizando cotizaciones...</p>}
+          {error && <p className="text-sm text-amber-400 mb-3">{error}</p>}
           <div className="space-y-3">
-            {topStocks.map(stock => (
+            {stocks.map(stock => (
               <button
                 key={stock.symbol}
                 onClick={() => setSelectedStock(stock.symbol)}
@@ -59,7 +91,7 @@ export default function Dashboard() {
                     <p className="text-sm text-slate-400">{stock.company}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">${stock.price}</p>
+                    <p className="font-bold">${stock.price.toFixed(2)}</p>
                     <p className={`text-sm ${stock.changePercent > 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {stock.changePercent > 0 ? '+' : ''}{stock.changePercent}%
                     </p>

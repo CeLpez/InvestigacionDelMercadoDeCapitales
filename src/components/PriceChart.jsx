@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,6 +10,7 @@ import {
   Legend
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
+import { stockService } from '../services/stockService'
 
 ChartJS.register(
   CategoryScale,
@@ -22,25 +23,49 @@ ChartJS.register(
 )
 
 export default function PriceChart({ symbol }) {
-  // Mock data - en producción, estos datos vendrían de la API
-  const generateMockData = () => {
-    const labels = []
-    const prices = []
-    let price = 150
+  const [chart, setChart] = useState(null)
+  const [error, setError] = useState('')
 
-    for (let i = 0; i < 30; i++) {
-      const date = new Date()
-      date.setDate(date.getDate() - (30 - i))
-      labels.push(date.toLocaleDateString('es-ES'))
-      
-      price = price + (Math.random() - 0.5) * 10
-      prices.push(parseFloat(price.toFixed(2)))
+  useEffect(() => {
+    let cancelled = false
+    setChart(null)
+    setError('')
+
+    stockService.getHistoricalData(symbol, '1d', '1mo')
+      .then(result => {
+        if (cancelled) return
+        const timestamps = result.timestamp || []
+        const closes = result.indicators?.quote?.[0]?.close || []
+        const points = timestamps
+          .map((timestamp, index) => ({
+            date: new Date(timestamp * 1000).toLocaleDateString('es-ES'),
+            price: closes[index]
+          }))
+          .filter(point => Number.isFinite(point.price))
+        if (points.length === 0) throw new Error('No hay precios históricos')
+        setChart({
+          labels: points.map(point => point.date),
+          prices: points.map(point => point.price)
+        })
+      })
+      .catch(fetchError => {
+        if (!cancelled) setError(fetchError.message || 'No se pudo cargar el gráfico')
+      })
+
+    return () => {
+      cancelled = true
     }
+  }, [symbol])
 
-    return { labels, prices }
+  if (error) {
+    return <p className="py-12 text-center text-amber-400">{error}</p>
   }
 
-  const { labels, prices } = generateMockData()
+  if (!chart) {
+    return <p className="py-12 text-center text-slate-400">Cargando datos históricos...</p>
+  }
+
+  const { labels, prices } = chart
 
   const data = {
     labels,

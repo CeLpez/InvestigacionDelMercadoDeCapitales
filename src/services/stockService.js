@@ -6,15 +6,29 @@ const API_BASE = 'https://query1.finance.yahoo.com'
 export const stockService = {
   async getStockData(symbol) {
     try {
-      const response = await axios.get(
-        `${API_BASE}/v10/finance/quoteSummary/${symbol}`,
-        {
-          params: {
-            modules: 'price,summaryDetail,assetProfile,defaultKeyStatistics'
-          }
-        }
-      )
-      return response.data.quoteSummary.result[0]
+      const response = await axios.get(`${API_BASE}/v8/finance/chart/${symbol}`, {
+        params: { interval: '1d', range: '5d' }
+      })
+      const result = response.data.chart.result?.[0]
+      if (!result?.meta) throw new Error(`No quote data for ${symbol}`)
+
+      const meta = result.meta
+      const price = meta.regularMarketPrice ?? meta.previousClose
+      const previousClose = meta.previousClose ?? meta.chartPreviousClose ?? price
+      const change = price - previousClose
+
+      return {
+        symbol,
+        company: meta.longName || meta.shortName || symbol,
+        price,
+        change,
+        changePercent: previousClose ? (change / previousClose) * 100 : 0,
+        marketCap: 'N/D',
+        pe: null,
+        dividend: null,
+        sector: 'N/D',
+        currency: meta.currency || 'USD'
+      }
     } catch (error) {
       console.error('Error fetching stock data:', error)
       throw error
@@ -32,7 +46,9 @@ export const stockService = {
           }
         }
       )
-      return response.data.chart.result[0]
+      const result = response.data.chart.result?.[0]
+      if (!result) throw new Error(`No historical data for ${symbol}`)
+      return result
     } catch (error) {
       console.error('Error fetching historical data:', error)
       throw error
@@ -42,12 +58,16 @@ export const stockService = {
   async searchSymbol(query) {
     try {
       const response = await axios.get(`${API_BASE}/v1/finance/search`, {
-        params: {
-          q: query,
-          lang: 'es'
-        }
+        params: { q: query, lang: 'es', quotesCount: 10, newsCount: 0 }
       })
-      return response.data.quotes || []
+      return (response.data.quotes || [])
+        .filter(quote => quote.quoteType === 'EQUITY')
+        .map(quote => ({
+          symbol: quote.symbol,
+          company: quote.longname || quote.shortname || quote.symbol,
+          exchange: quote.exchange,
+          sector: 'N/D'
+        }))
     } catch (error) {
       console.error('Error searching symbols:', error)
       throw error

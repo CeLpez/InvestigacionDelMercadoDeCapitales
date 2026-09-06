@@ -1,22 +1,42 @@
 import React, { useState } from 'react'
-import { mockStocks } from '../services/stockService'
+import { mockStocks, stockService } from '../services/stockService'
 
 export default function StockSearch() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     const value = e.target.value
     setQuery(value)
+    setError('')
 
-    if (value.length > 0) {
-      const filtered = Object.values(mockStocks).filter(stock =>
+    if (value.trim().length < 2) {
+      setResults([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const remoteResults = await stockService.searchSymbol(value.trim())
+      const enrichedResults = await Promise.all(remoteResults.slice(0, 10).map(async result => {
+        try {
+          return await stockService.getStockData(result.symbol)
+        } catch {
+          return { ...result, ...(mockStocks[result.symbol] || {}) }
+        }
+      }))
+      setResults(enrichedResults)
+    } catch (searchError) {
+      const fallback = Object.values(mockStocks).filter(stock =>
         stock.symbol.includes(value.toUpperCase()) ||
         stock.company.toLowerCase().includes(value.toLowerCase())
       )
-      setResults(filtered)
-    } else {
-      setResults([])
+      setResults(fallback)
+      setError('No se pudo consultar el proveedor; mostrando coincidencias locales.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -35,6 +55,8 @@ export default function StockSearch() {
           />
         </div>
 
+        {loading && <p className="text-slate-400 text-center pb-4">Buscando en el mercado...</p>}
+        {error && <p className="text-amber-400 text-center pb-4">{error}</p>}
         {query && results.length === 0 && (
           <p className="text-slate-400 text-center py-8">No se encontraron resultados</p>
         )}
@@ -48,23 +70,23 @@ export default function StockSearch() {
                     <h3 className="text-2xl font-bold text-blue-400">{stock.symbol}</h3>
                     <p className="text-slate-400">{stock.company}</p>
                   </div>
-                  <span className="text-3xl font-bold">${stock.price}</span>
+                  <span className="text-3xl font-bold">{stock.price ? `$${stock.price.toFixed(2)}` : 'N/D'}</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-slate-400 text-sm">Cambio</p>
                     <p className={`text-lg font-bold ${stock.changePercent > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {stock.changePercent > 0 ? '+' : ''}{stock.changePercent}%
+                      {stock.changePercent > 0 ? '+' : ''}{Number(stock.changePercent || 0).toFixed(2)}%
                     </p>
                   </div>
                   <div>
                     <p className="text-slate-400 text-sm">Market Cap</p>
-                    <p className="text-lg font-bold">{stock.marketCap}</p>
+                    <p className="text-lg font-bold">{stock.marketCap || 'N/D'}</p>
                   </div>
                   <div>
                     <p className="text-slate-400 text-sm">P/E Ratio</p>
-                    <p className="text-lg font-bold">{stock.pe}</p>
+                    <p className="text-lg font-bold">{stock.pe ?? 'N/D'}</p>
                   </div>
                   <div>
                     <p className="text-slate-400 text-sm">Sector</p>
