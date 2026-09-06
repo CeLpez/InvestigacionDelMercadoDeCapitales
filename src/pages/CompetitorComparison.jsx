@@ -1,159 +1,139 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { mockStocks, stockService } from '../services/stockService'
+
+const fallbackAdvantages = {
+  AAPL: ['Ecosistema integrado', 'Marca y fidelidad', 'Márgenes sólidos'],
+  MSFT: ['Diversificación', 'Azure y servicios cloud', 'Ingresos recurrentes'],
+  GOOGL: ['Publicidad dominante', 'Escala en datos e IA', 'Balance robusto'],
+  AMZN: ['AWS', 'Logística integrada', 'Crecimiento del comercio online'],
+  TSLA: ['Innovación en vehículos eléctricos', 'Marca global', 'Capacidad de crecimiento']
+}
+
+const fallbackRisks = {
+  AAPL: ['Dependencia del iPhone', 'Valoración exigente', 'Presión competitiva'],
+  MSFT: ['Competencia cloud', 'Riesgo regulatorio', 'Dependencia del gasto corporativo'],
+  GOOGL: ['Dependencia publicitaria', 'Regulación', 'Competencia en IA'],
+  AMZN: ['Márgenes retail bajos', 'Regulación', 'Alta inversión de capital'],
+  TSLA: ['Alta volatilidad', 'Competencia creciente', 'Sensibilidad a las tasas']
+}
+
+const formatNumber = value => value == null || value === 'N/D' ? 'N/D' : typeof value === 'number' ? value.toLocaleString('es-AR', { maximumFractionDigits: 2 }) : value
 
 export default function CompetitorComparison() {
   const [selectedStocks, setSelectedStocks] = useState(['AAPL', 'MSFT'])
   const [quotes, setQuotes] = useState(mockStocks)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState([])
   const [loading, setLoading] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    stockService.getMultipleStocks(selectedStocks).then(results => {
-      if (!cancelled) {
-        setQuotes(current => ({
-          ...current,
-          ...Object.fromEntries(results.map(stock => [stock.symbol, { ...current[stock.symbol], ...stock }]))
-        }))
-      }
+    Promise.all([
+      stockService.getMultipleStocks(selectedStocks),
+      Promise.all(selectedStocks.map(symbol => stockService.getCompanyProfile(symbol)))
+    ]).then(([stockResults, profiles]) => {
+      if (cancelled) return
+      const merged = {}
+      stockResults.forEach(stock => { merged[stock.symbol] = { ...stock } })
+      profiles.forEach((profile, index) => {
+        if (profile) merged[selectedStocks[index]] = { ...merged[selectedStocks[index]], ...profile }
+      })
+      setQuotes(current => ({ ...current, ...merged }))
     }).finally(() => {
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
   }, [selectedStocks])
 
-  const toggleStock = (symbol) => {
-    setSelectedStocks(prev =>
-      prev.includes(symbol)
-        ? prev.filter(s => s !== symbol)
-        : [...prev, symbol]
-    )
+  const searchCompanies = async () => {
+    if (!searchTerm.trim()) return
+    setSearching(true)
+    setError('')
+    try {
+      const results = await stockService.searchSymbol(searchTerm.trim())
+      setSearchResults(results.slice(0, 6))
+      if (!results.length) setError('No se encontraron empresas con esa búsqueda.')
+    } catch {
+      setError('No se pudo consultar el buscador. Prueba con el ticker exacto.')
+    } finally {
+      setSearching(false)
+    }
   }
+
+  const addCompany = symbol => {
+    if (selectedStocks.includes(symbol)) return
+    if (selectedStocks.length >= 3) {
+      setError('Puedes comparar hasta 3 empresas.')
+      return
+    }
+    setSelectedStocks(previous => [...previous, symbol])
+    setSearchResults([])
+    setSearchTerm('')
+    setError('')
+  }
+
+  const removeCompany = symbol => setSelectedStocks(previous => previous.filter(item => item !== symbol))
 
   const comparisonData = [
-    { label: 'Precio Actual', key: 'price' },
-    { label: 'Market Cap', key: 'marketCap' },
-    { label: 'P/E Ratio', key: 'pe' },
-    { label: 'Dividendo', key: 'dividend' },
-    { label: 'Cambio %', key: 'changePercent' }
+    { label: 'Precio actual', key: 'price', suffix: '$' },
+    { label: 'Cambio diario', key: 'changePercent', suffix: '%' },
+    { label: 'Capitalización', key: 'marketCap' },
+    { label: 'P/E (trailing)', key: 'pe' },
+    { label: 'P/E forward', key: 'forwardPe' },
+    { label: 'Dividendo anual', key: 'dividend', suffix: '$' },
+    { label: 'Beta', key: 'beta' },
+    { label: 'Sector', key: 'sector' }
   ]
 
-  const advantages = {
-    'AAPL': ['Ecosistema único', 'Margen de ganancias alto', 'Lealtad de clientes'],
-    'MSFT': ['Diversificación empresarial', 'Cloud computing (Azure)', 'Dividendos consistentes'],
-    'GOOGL': ['Publicidad digital dominante', 'Innovación AI', 'Servicios integrados'],
-    'AMZN': ['E-commerce líder', 'AWS dominante', 'Logística integrada'],
-    'TSLA': ['Innovación en EV', 'Energías renovables', 'Crecimiento acelerado']
-  }
-
-  const disadvantages = {
-    'AAPL': ['Dependencia del iPhone', 'Precio elevado', 'Competencia creciente'],
-    'MSFT': ['Competencia en cloud', 'Legacy en software', 'Regulación antitrust'],
-    'GOOGL': ['Dependencia de publicidad', 'Privacidad regulatoria', 'Competencia AI'],
-    'AMZN': ['Márgenes bajos e-commerce', 'Presión regulatoria', 'Competencia retail'],
-    'TSLA': ['Volatilidad accionaria', 'Capex intensivo', 'Competencia EV global']
-  }
+  const strongestMomentum = useMemo(() => selectedStocks.reduce((winner, symbol) => {
+    return Number(quotes[symbol]?.changePercent || -Infinity) > Number(quotes[winner]?.changePercent || -Infinity) ? symbol : winner
+  }, selectedStocks[0]), [selectedStocks, quotes])
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h2 className="text-3xl font-bold mb-6">⚖️ Comparador de Empresas</h2>
+    <div className="max-w-[1250px] mx-auto px-4 lg:px-8 py-8">
+      <header className="mb-8">
+        <p className="text-xs uppercase tracking-[0.22em] text-cyan-400 mb-3">Análisis relativo</p>
+        <h2 className="text-4xl font-semibold tracking-tight text-white">Comparar empresas</h2>
+        <p className="text-slate-400 mt-3 max-w-3xl">Contrasta valoración, movimiento de precio, escala y riesgos. Los datos son informativos y no constituyen una recomendación de inversión.</p>
+      </header>
 
-      {/* Selector de acciones */}
-      <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6 mb-8">
-        <h3 className="text-xl font-bold mb-4">Selecciona empresas para comparar (máx 3)</h3>
-        <div className="grid md:grid-cols-5 gap-3">
-          {Object.entries(mockStocks).map(([symbol, stock]) => (
-            <button
-              key={symbol}
-              onClick={() => toggleStock(symbol)}
-              disabled={selectedStocks.length === 3 && !selectedStocks.includes(symbol)}
-              className={`p-4 rounded-lg transition-all font-medium ${
-                selectedStocks.includes(symbol)
-                  ? 'bg-blue-600 border border-blue-400'
-                  : 'bg-slate-700 border border-slate-600 hover:border-slate-500'
-              } ${selectedStocks.length === 3 && !selectedStocks.includes(symbol) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {symbol}
-            </button>
-          ))}
+      <section className="border border-slate-800 rounded-2xl bg-[#0c1422] p-5 mb-8">
+        <div className="flex flex-col md:flex-row gap-3">
+          <input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} onKeyDown={event => event.key === 'Enter' && searchCompanies()} placeholder="Añadir empresa por ticker o nombre: NVDA, YPF, Coca-Cola..." className="flex-1 px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white" />
+          <button onClick={searchCompanies} disabled={searching} className="px-5 py-3 rounded-lg bg-cyan-500 text-slate-950 font-semibold disabled:opacity-50">{searching ? 'Buscando...' : 'Añadir empresa'}</button>
         </div>
-      </div>
-
-      {/* Tabla comparativa */}
-      {selectedStocks.length > 0 && (
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6 mb-8 overflow-x-auto">
-          <h3 className="text-xl font-bold mb-4">Métricas Comparativas {loading && <span className="text-sm text-slate-500 font-normal">Actualizando...</span>}</h3>
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-slate-600">
-                <th className="px-4 py-3 font-bold">Métrica</th>
-                {selectedStocks.map(symbol => (
-                  <th key={symbol} className="px-4 py-3 font-bold text-blue-400">{symbol}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {comparisonData.map(metric => (
-                <tr key={metric.key} className="border-b border-slate-700 hover:bg-slate-700/20">
-                  <td className="px-4 py-3 font-medium">{metric.label}</td>
-                  {selectedStocks.map(symbol => (
-                    <td key={`${symbol}-${metric.key}`} className="px-4 py-3">
-                      {metric.key === 'price' && (quotes[symbol]?.price ? `$${quotes[symbol].price.toFixed(2)}` : 'N/D')}
-                      {metric.key === 'marketCap' && (quotes[symbol]?.marketCap || 'N/D')}
-                      {metric.key === 'pe' && (quotes[symbol]?.pe ?? 'N/D')}
-                      {metric.key === 'dividend' && (quotes[symbol]?.dividend == null ? 'N/D' : `$${quotes[symbol].dividend}`)}
-                      {metric.key === 'changePercent' && (
-                        <span className={quotes[symbol]?.changePercent > 0 ? 'text-green-400' : 'text-red-400'}>
-                          {quotes[symbol]?.changePercent > 0 ? '+' : ''}{Number(quotes[symbol]?.changePercent || 0).toFixed(2)}%
-                        </span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {searchResults.length > 0 && <div className="grid md:grid-cols-2 gap-2 mt-3">{searchResults.map(result => <button key={result.symbol} onClick={() => addCompany(result.symbol)} className="text-left px-4 py-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-400"><strong className="text-cyan-300">{result.symbol}</strong><span className="text-sm text-slate-400 ml-2">{result.company}</span><span className="block text-xs text-slate-500 mt-1">{result.exchange || 'Mercado público'}</span></button>)}</div>}
+        {error && <p className="text-amber-400 text-sm mt-3">{error}</p>}
+        <div className="flex flex-wrap gap-2 mt-5">
+          {selectedStocks.map(symbol => <span key={symbol} className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-200">{symbol}<button onClick={() => removeCompany(symbol)} aria-label={`Quitar ${symbol}`} className="text-cyan-400 hover:text-white">×</button></span>)}
+          <span className="text-xs text-slate-500 self-center ml-1">{selectedStocks.length}/3 seleccionadas</span>
         </div>
-      )}
+      </section>
 
-      {/* Ventajas y desventajas */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {selectedStocks.map(symbol => (
-          <div key={symbol} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
-            <h3 className="text-2xl font-bold text-blue-400 mb-4">{symbol}</h3>
+      {selectedStocks.length > 0 && <section className="mb-8">
+        <div className="flex items-center justify-between mb-4"><h3 className="text-xl font-semibold text-white">Vista rápida {loading && <span className="text-sm text-slate-500 font-normal">Actualizando...</span>}</h3><span className="text-xs text-slate-500">Comparación orientativa</span></div>
+        <div className="grid md:grid-cols-3 gap-4">{selectedStocks.map(symbol => {
+          const quote = quotes[symbol] || {}
+          return <article key={symbol} className={`border rounded-xl p-5 ${symbol === strongestMomentum ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-800 bg-[#0c1422]'}`}>
+            <div className="flex justify-between items-start"><div><p className="text-2xl font-semibold text-white">{symbol}</p><p className="text-xs text-slate-500 mt-1">{quote.company || 'Empresa seleccionada'}</p></div><button onClick={() => removeCompany(symbol)} className="text-slate-500 hover:text-white">×</button></div>
+            <p className="text-3xl font-semibold text-cyan-300 mt-5">{quote.price ? `$${formatNumber(quote.price)}` : 'N/D'}</p>
+            <p className={`text-sm mt-1 ${Number(quote.changePercent) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{quote.changePercent == null ? 'N/D' : `${Number(quote.changePercent) >= 0 ? '+' : ''}${formatNumber(quote.changePercent)}% hoy`}</p>
+            {symbol === strongestMomentum && <span className="inline-block text-xs text-emerald-300 mt-4">Mejor momentum diario del grupo</span>}
+          </article>
+        })}</div>
+      </section>}
 
-            <div className="mb-6">
-              <h4 className="font-bold text-green-400 mb-3">✅ Ventajas</h4>
-              <ul className="space-y-2">
-                {(advantages[symbol] || []).map((adv, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-green-400 mt-1">•</span>
-                    <span className="text-slate-300">{adv}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      {selectedStocks.length > 0 && <section className="border border-slate-800 rounded-2xl bg-[#0c1422] p-5 mb-8 overflow-x-auto">
+        <h3 className="text-xl font-semibold text-white mb-4">Métricas lado a lado</h3>
+        <table className="w-full min-w-[700px] text-left"><thead><tr className="border-b border-slate-700"><th className="px-4 py-3 text-sm text-slate-500">Métrica</th>{selectedStocks.map(symbol => <th key={symbol} className="px-4 py-3 text-cyan-300">{symbol}</th>)}</tr></thead><tbody>{comparisonData.map(metric => <tr key={metric.key} className="border-b border-slate-800"><td className="px-4 py-3 text-sm text-slate-300">{metric.label}</td>{selectedStocks.map(symbol => { const value = quotes[symbol]?.[metric.key]; return <td key={`${symbol}-${metric.key}`} className="px-4 py-3 text-sm text-white">{value == null ? 'N/D' : `${metric.suffix === '$' ? '$' : ''}${formatNumber(value)}${metric.suffix === '%' ? '%' : ''}`}</td> })}</tr>)}</tbody></table>
+      </section>}
 
-            <div>
-              <h4 className="font-bold text-red-400 mb-3">⚠️ Desventajas</h4>
-              <ul className="space-y-2">
-                {(disadvantages[symbol] || []).map((dis, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-red-400 mt-1">•</span>
-                    <span className="text-slate-300">{dis}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {selectedStocks.length === 0 && (
-        <div className="text-center py-12 bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl">
-          <p className="text-slate-400">Selecciona al menos una empresa para comenzar la comparación</p>
-        </div>
-      )}
+      {selectedStocks.length > 0 && <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {selectedStocks.map(symbol => <article key={symbol} className="border border-slate-800 rounded-xl bg-[#0c1422] p-5"><h3 className="text-xl font-semibold text-white mb-4">{symbol}</h3><div className="mb-5"><h4 className="text-sm font-semibold text-emerald-400 mb-2">Fortalezas</h4><ul className="space-y-1 text-sm text-slate-400">{(fallbackAdvantages[symbol] || ['Consultar perfil y analizar el sector', 'Evaluar resultados y generación de caja', 'Comparar valoración con pares']).map(item => <li key={item}>+ {item}</li>)}</ul></div><div><h4 className="text-sm font-semibold text-rose-400 mb-2">Riesgos a revisar</h4><ul className="space-y-1 text-sm text-slate-400">{(fallbackRisks[symbol] || ['Volatilidad del precio', 'Riesgo del sector', 'Liquidez y tipo de cambio']).map(item => <li key={item}>− {item}</li>)}</ul></div></article>)}
+      </section>}
     </div>
   )
 }
