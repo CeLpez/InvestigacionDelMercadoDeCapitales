@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function Navbar({ currentPage, setCurrentPage }) {
+export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignOut }) {
   const navItems = [
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'search', label: '🔍 Buscar' },
@@ -18,10 +18,21 @@ export default function Navbar({ currentPage, setCurrentPage }) {
   return (
     <nav className="fixed top-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-b border-slate-700 shadow-lg z-50">
       <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-4">
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
             📈 Mercado de Capitales
           </h1>
+          {onSignOut && (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="hidden md:inline text-slate-400">{userEmail}</span>
+              <button
+                onClick={onSignOut}
+                className="px-3 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
           {navItems.map(item => (
