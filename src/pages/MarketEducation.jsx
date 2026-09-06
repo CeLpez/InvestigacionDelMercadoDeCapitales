@@ -21,6 +21,18 @@ const glossary = [
 export default function MarketEducation() {
   const [activeLevel, setActiveLevel] = useState('principiante')
   const [showAnswer, setShowAnswer] = useState(false)
+  const [examStarted, setExamStarted] = useState(false)
+  const [examAnswers, setExamAnswers] = useState({})
+  const [examSubmitted, setExamSubmitted] = useState(false)
+
+  const examQuestions = [
+    { question: '¿Qué función cumple principalmente el mercado de capitales?', options: ['Conectar ahorro e inversión', 'Garantizar ganancias', 'Eliminar toda volatilidad'], answer: 0 },
+    { question: '¿Qué representa una acción?', options: ['Una deuda del Estado', 'Una participación en una empresa', 'Un depósito bancario'], answer: 1 },
+    { question: '¿Qué práctica ayuda a reducir el riesgo no sistemático?', options: ['Concentrar todo en una empresa', 'Diversificar entre activos y sectores', 'Comprar solo lo que subió'], answer: 1 },
+    { question: '¿Qué describe mejor una orden límite?', options: ['Se ejecuta a cualquier precio', 'Se ejecuta solo al precio indicado o uno mejor', 'No necesita saldo'], answer: 1 },
+    { question: 'Antes de invertir, ¿qué debería definir una persona?', options: ['Objetivo, plazo y tolerancia al riesgo', 'La recomendación de un influencer', 'El activo con mayor rumor'], answer: 0 }
+  ]
+  const examScore = examQuestions.reduce((score, item, index) => score + (examAnswers[index] === item.answer ? 1 : 0), 0)
 
   const learningPaths = {
     principiante: {
@@ -108,6 +120,23 @@ export default function MarketEducation() {
           </div>
           {showAnswer && <p className="text-sm text-emerald-400 mt-4">Correcto. Diversificar reduce la dependencia de un único emisor o sector.</p>}
         </aside>
+      </section>
+
+      <section className="mt-12 border-t border-slate-800 pt-10">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-5">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-amber-400 mb-2">Preparación</p>
+            <h3 className="text-2xl font-semibold text-white">Simulacro de examen CNV</h3>
+            <p className="text-sm text-slate-400 mt-2 max-w-2xl">Preguntas de práctica sobre conceptos del mercado de capitales. No es el examen oficial ni otorga certificación.</p>
+          </div>
+          {!examStarted && <button onClick={() => { setExamStarted(true); setExamSubmitted(false); setExamAnswers({}) }} className="px-5 py-3 rounded-lg bg-amber-400 text-slate-950 font-semibold">Comenzar simulacro</button>}
+        </div>
+        {examStarted && <div className="border border-slate-800 rounded-2xl bg-[#0c1422] p-6">
+          <div className="space-y-7">
+            {examQuestions.map((item, index) => <fieldset key={item.question}><legend className="text-white font-medium mb-3">{index + 1}. {item.question}</legend><div className="grid md:grid-cols-3 gap-2">{item.options.map((option, optionIndex) => <label key={option} className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer ${examAnswers[index] === optionIndex ? 'border-amber-400 bg-amber-400/10 text-white' : 'border-slate-700 text-slate-400'}`}><input type="radio" name={`exam-${index}`} checked={examAnswers[index] === optionIndex} onChange={() => { setExamAnswers({ ...examAnswers, [index]: optionIndex }); setExamSubmitted(false) }} />{option}</label>)}</div></fieldset>)}
+          </div>
+          <div className="flex flex-wrap items-center gap-4 mt-8"><button onClick={() => setExamSubmitted(true)} className="px-5 py-3 rounded-lg bg-cyan-500 text-slate-950 font-semibold">Ver resultado</button><button onClick={() => setExamStarted(false)} className="px-5 py-3 rounded-lg bg-slate-800 text-slate-300">Cerrar</button>{examSubmitted && <p className="text-emerald-400 font-semibold">Resultado: {examScore}/{examQuestions.length} respuestas correctas.</p>}</div>
+        </div>}
       </section>
     </div>
   )

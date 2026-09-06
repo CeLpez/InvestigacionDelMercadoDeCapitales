@@ -8,6 +8,7 @@ export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignO
     { id: 'comparison', label: '⚖️ Comparar' },
     { id: 'sectors', label: '🏢 Sectores' },
     { id: 'portfolio', label: '💼 Portafolio' },
+    { id: 'trading', label: '🧾 Comprar' },
     { id: 'history', label: '📜 Historial' },
     { id: 'alerts', label: '🔔 Alertas' },
     { id: 'simulator', label: '📈 Simulador' },
