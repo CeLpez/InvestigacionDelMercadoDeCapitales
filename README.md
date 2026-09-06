@@ -4,13 +4,23 @@ Una plataforma completa para monitorear, analizar e invertir en el mercado de ca
 
 ## 🎯 Características Principales
 
+### Análisis y Monitoreo
 - **📊 Dashboard en Tiempo Real**: Visualiza precios actuales, gráficos interactivos y tendencias del mercado
 - **🔍 Búsqueda de Acciones**: Encuentra y analiza cualquier acción disponible
+- **📰 Noticias Financieras**: Lee noticias del mercado filtradas por acción y categoría
+- **🔔 Alertas de Precio**: Configura alertas cuando las acciones alcancen precios objetivo
+
+### Educación e Información
 - **📚 Educación del Mercado**: Aprende conceptos fundamentales, estrategias e indicadores
 - **⚖️ Comparador de Competidores**: Compara múltiples empresas con ventajas/desventajas
 - **🏢 Análisis por Sectores**: Sectoriza el mercado y analiza tendencias por industria
-- **💼 Gestor de Portafolios**: Crea, monitorea y optimiza tu portafolio de inversiones
 - **💡 Recomendaciones**: Recibe sugerencias de inversión basadas en análisis técnico y fundamental
+
+### Gestión de Inversiones
+- **💼 Gestor de Portafolios**: Crea, monitorea y optimiza tu portafolio de inversiones
+- **📜 Historial de Transacciones**: Rastrea todas tus compras y ventas con timestamps
+- **📥 Exportar a CSV**: Descarga datos del portafolio e historial para análisis externo
+- **📈 Simulador de Rentabilidad**: Proyecta retornos futuros con parámetros ajustables
 
 ## 🚀 Tecnologías Utilizadas
 
@@ -51,13 +61,19 @@ src/
 
 ## 📖 Páginas Disponibles
 
-1. **Dashboard**: Resumen del mercado y precios principales
-2. **Buscar**: Búsqueda y análisis de acciones individuales
-3. **Educación**: Recursos educativos sobre inversiones
-4. **Comparar**: Compara empresas competidoras
-5. **Sectores**: Análisis y tendencias por sector
-6. **Portafolio**: Gestión de tu cartera de inversiones
-7. **Recomendaciones**: Sugerencias de inversión y estrategias
+| Sección | Descripción |
+|---------|------------|
+| **Dashboard** | Resumen del mercado, precios y gráficos principales |
+| **Buscar** | Búsqueda y análisis detallado de acciones individuales |
+| **Educación** | Recursos sobre fundamentales, análisis, riesgo y glosario |
+| **Comparar** | Compara empresas con análisis de ventajas/desventajas |
+| **Sectores** | Análisis de mercado segmentado por industria |
+| **Portafolio** | Gestor de inversiones con seguimiento de ganancias/pérdidas |
+| **Historial** | Registro completo de transacciones (compras/ventas) |
+| **Alertas** | Configurar alertas de precio para monitoreo automático |
+| **Simulador** | Proyectar rentabilidad a futuro con múltiples escenarios |
+| **Noticias** | Feed de noticias financieras con análisis de sentimiento |
+| **Recomendaciones** | Sugerencias de inversión y estrategias de cartera |
 
 ## 🔄 Fuentes de Datos
 
@@ -71,18 +87,71 @@ src/
 3. Selecciona la empresa y cantidad
 4. Monitora ganancias/pérdidas en tiempo real
 5. Actualiza cantidades según sea necesario
+6. **Exporta a CSV** para análisis en Excel
+
+## 🔔 Cómo Usar Alertas
+
+1. Navega a **"Alertas"**
+2. Haz clic en **"Nueva Alerta"**
+3. Selecciona acción, tipo (arriba/abajo) y precio objetivo
+4. Recibe notificaciones cuando se alcance el precio
+
+## 📈 Cómo Usar el Simulador
+
+1. Ve a **"Simulador"**
+2. Ajusta:
+   - Inversión inicial
+   - Aporte mensual
+   - Retorno anual esperado (5% conservador, 8% moderado, 12% agresivo)
+   - Horizonte temporal (años)
+3. Observa proyecciones en tiempo real
+4. Compara escenarios (conservador, balanceado, agresivo)
 
 ## 🎓 Consejos de Inversión
 
-- Comienza con pequeñas inversiones mientras aprendes
-- Diversifica tu portafolio entre sectores
-- No intentes "timing the market"
-- Mantén una perspectiva a largo plazo
-- Estudia las empresas antes de invertir
+- ✅ Comienza con pequeñas inversiones mientras aprendes
+- ✅ Diversifica tu portafolio entre sectores
+- ✅ No intentes "timing the market" - es impredecible
+- ✅ Mantén una perspectiva a largo plazo (5+ años)
+- ✅ Estudia las empresas antes de invertir
+- ✅ Sigue noticias financieras y eventos económicos
+- ✅ No inviertas dinero que necesites en corto plazo
+
+## 📊 Características de Análisis
+
+- **Gráficos interactivos** con Chart.js
+- **Filtros dinámicos** en todas las tablas
+- **Análisis comparativo** entre empresas
+- **Sentimiento de noticias** (positivo/negativo)
+- **Métricas financieras clave** (P/E, Dividend, ROE)
+- **Seguimiento de rendimiento** en portafolio
+
+## 📥 Exportación de Datos
+
+El servicio de exportación CSV incluye:
+- **Portfolio**: Símbolo, cantidad, precios, valores, ganancias
+- **Transacciones**: Fecha, tipo, cantidad, precio, total
+- **Resumen**: Totales y métricas agregadas
 
 ## ⚠️ Disclaimer
 
 Esta aplicación es educativa y no constituye asesoramiento financiero. Consulta con un asesor financiero calificado antes de tomar decisiones de inversión. Los datos son de demostración y no representan precios reales actuales.
+
+## ⚙️ Funcionalidad de Estado Global
+
+Con Zustand puedes:
+- Guardar portafolio persistentemente
+- Mantener lista de seguimiento (watchlist)
+- Sincronizar datos entre páginas
+
+## 🚀 Próximas Características Potenciales
+
+- Integración con APIs reales (Yahoo Finance, Polygon.io)
+- Autenticación y sincronización en la nube
+- Notificaciones push en tiempo real
+- Análisis técnico avanzado (RSI, MACD, Bollinger Bands)
+- Backtesting de estrategias
+- Integración con corredoras de bolsa
 
 ## 📝 Licencia
 
