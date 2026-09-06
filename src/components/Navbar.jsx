@@ -5,8 +5,6 @@ export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignO
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'center', label: '💼 Centro de inversión' },
     { id: 'education', label: '📚 Educación' },
-    { id: 'comparison', label: '⚖️ Comparar' },
-    { id: 'sectors', label: '🏢 Sectores' },
     { id: 'alerts', label: '🔔 Alertas' },
     { id: 'simulator', label: '📈 Simulador' },
     { id: 'news', label: '📰 Noticias' },

@@ -3,11 +3,15 @@ import Portfolio from './Portfolio'
 import TradingSimulator from './TradingSimulator'
 import StockSearch from './StockSearch'
 import TransactionHistory from './TransactionHistory'
+import SectorAnalysis from './SectorAnalysis'
+import CompetitorComparison from './CompetitorComparison'
 
 const tabs = [
   ['portfolio', 'Mi portafolio'],
   ['trading', 'Comprar y vender'],
   ['companies', 'Empresas'],
+  ['sectors', 'Sectores y pares'],
+  ['comparison', 'Comparar'],
   ['history', 'Historial']
 ]
 
@@ -17,6 +21,8 @@ export default function InvestmentCenter() {
     portfolio: <Portfolio />,
     trading: <TradingSimulator />,
     companies: <StockSearch />,
+    sectors: <SectorAnalysis />,
+    comparison: <CompetitorComparison />,
     history: <TransactionHistory />
   }
 
