@@ -85,6 +85,53 @@ export const stockService = {
   }
 }
 
+export const marketUniverse = {
+  argentina: {
+    index: [{ symbol: '^MERV', name: 'MERVAL', type: 'Índice' }],
+    adrs: [
+      { symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'ADR' },
+      { symbol: 'YPF', name: 'YPF', type: 'ADR' },
+      { symbol: 'PAM', name: 'Pampa Energía', type: 'ADR' },
+      { symbol: 'TGS', name: 'Transportadora de Gas del Sur', type: 'ADR' },
+      { symbol: 'BMA', name: 'Banco Macro', type: 'ADR' },
+      { symbol: 'BBAR', name: 'BBVA Argentina', type: 'ADR' },
+      { symbol: 'CEPU', name: 'Central Puerto', type: 'ADR' },
+      { symbol: 'CRESY', name: 'Cresud', type: 'ADR' },
+      { symbol: 'LOMA', name: 'Loma Negra', type: 'ADR' },
+      { symbol: 'SUPV', name: 'Grupo Supervielle', type: 'ADR' }
+    ],
+    bonds: [
+      { symbol: 'AL30.BA', name: 'Bonar 2030', type: 'Bono' },
+      { symbol: 'GD30.BA', name: 'Global 2030', type: 'Bono' },
+      { symbol: 'AL35.BA', name: 'Bonar 2035', type: 'Bono' },
+      { symbol: 'GD35.BA', name: 'Global 2035', type: 'Bono' }
+    ]
+  },
+  global: [
+    { symbol: '^BVSP', name: 'Brasil - Bovespa', type: 'Índice' },
+    { symbol: '^N225', name: 'Japón - Nikkei 225', type: 'Índice' },
+    { symbol: '^KS11', name: 'Corea - KOSPI', type: 'Índice' },
+    { symbol: '^GSPC', name: 'Estados Unidos - S&P 500', type: 'Índice' },
+    { symbol: '^DJI', name: 'Estados Unidos - Dow Jones', type: 'Índice' },
+    { symbol: '^IXIC', name: 'Estados Unidos - Nasdaq', type: 'Índice' }
+  ],
+  sp500: [
+    ['MSFT', 'Microsoft'], ['AAPL', 'Apple'], ['NVDA', 'NVIDIA'], ['AMZN', 'Amazon'],
+    ['META', 'Meta Platforms'], ['GOOGL', 'Alphabet'], ['AVGO', 'Broadcom'], ['BRK-B', 'Berkshire Hathaway'],
+    ['GOOG', 'Alphabet C'], ['TSLA', 'Tesla'], ['LLY', 'Eli Lilly'], ['WMT', 'Walmart'],
+    ['JPM', 'JPMorgan Chase'], ['V', 'Visa'], ['ORCL', 'Oracle'], ['XOM', 'Exxon Mobil'],
+    ['MA', 'Mastercard'], ['JNJ', 'Johnson & Johnson'], ['COST', 'Costco'], ['HD', 'Home Depot']
+  ].map(([symbol, name]) => ({ symbol, name, type: 'Acción S&P 500' }))
+}
+
+export const getMarketUniverse = () => [
+  ...marketUniverse.argentina.index,
+  ...marketUniverse.argentina.adrs,
+  ...marketUniverse.argentina.bonds,
+  ...marketUniverse.global,
+  ...marketUniverse.sp500
+]
+
 // Mock data for development
 export const mockStocks = {
   'AAPL': {

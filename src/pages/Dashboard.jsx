@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { mockStocks, stockService } from '../services/stockService'
+import { getMarketUniverse, marketUniverse, mockStocks, stockService } from '../services/stockService'
 import PriceChart from '../components/PriceChart'
 
 export default function Dashboard() {
@@ -7,6 +7,7 @@ export default function Dashboard() {
   const [stocks, setStocks] = useState(Object.values(mockStocks))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [marketQuotes, setMarketQuotes] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -35,7 +36,48 @@ export default function Dashboard() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    const universe = getMarketUniverse()
+
+    Promise.all(universe.map(async instrument => {
+      try {
+        return [instrument.symbol, { ...instrument, ...(await stockService.getStockData(instrument.symbol)) }]
+      } catch {
+        return [instrument.symbol, instrument]
+      }
+    })).then(entries => {
+      if (!cancelled) setMarketQuotes(Object.fromEntries(entries))
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const selected = stocks.find(stock => stock.symbol === selectedStock) || mockStocks[selectedStock]
+  const quote = (instrument) => marketQuotes[instrument.symbol] || instrument
+  const formatPrice = (value) => Number.isFinite(value) ? `$${value.toFixed(2)}` : 'Sin datos'
+  const formatChange = (value) => Number.isFinite(value)
+    ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+    : 'N/D'
+  const changeClass = (value) => value >= 0 ? 'text-emerald-400' : 'text-rose-400'
+  const renderQuoteCard = (instrument) => {
+    const item = quote(instrument)
+    return (
+      <div key={instrument.symbol} className="bg-[#0c1422] border border-slate-800 rounded-xl p-4 hover:border-slate-600 transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-semibold text-white truncate">{instrument.symbol}</p>
+            <p className="text-xs text-slate-500 truncate">{instrument.name || item.company}</p>
+          </div>
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">{instrument.type}</span>
+        </div>
+        <p className="text-xl font-semibold text-slate-100 mt-4">{formatPrice(item.price)}</p>
+        <p className={`text-sm mt-1 ${changeClass(item.changePercent)}`}>{formatChange(item.changePercent)}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-6 lg:py-8">
@@ -154,6 +196,54 @@ export default function Dashboard() {
             <p className="text-2xl font-bold">14.32</p>
             <p className="text-green-400 text-sm">-2.15%</p>
           </div>
+
+          <section className="mt-6">
+            <div className="flex items-end justify-between gap-4 mb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">Global markets</p>
+                <h3 className="text-xl font-semibold text-white">Principales mercados</h3>
+              </div>
+              <p className="text-xs text-slate-500">Índices de referencia</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+              {marketUniverse.global.map(renderQuoteCard)}
+            </div>
+          </section>
+
+          <section className="mt-8">
+            <div className="mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">Argentina</p>
+              <h3 className="text-xl font-semibold text-white">MERVAL, ADRs y bonos</h3>
+            </div>
+            <div className="mb-5">
+              <h4 className="text-sm font-medium text-slate-400 mb-3">Índice MERVAL</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {marketUniverse.argentina.index.map(renderQuoteCard)}
+              </div>
+            </div>
+            <div className="mb-5">
+              <h4 className="text-sm font-medium text-slate-400 mb-3">ADRs argentinos</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {marketUniverse.argentina.adrs.map(renderQuoteCard)}
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-slate-400 mb-3">Bonos soberanos</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {marketUniverse.argentina.bonds.map(renderQuoteCard)}
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-8">
+            <div className="mb-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-cyan-400 mb-1">Estados Unidos</p>
+              <h3 className="text-xl font-semibold text-white">20 empresas destacadas del S&P 500</h3>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {marketUniverse.sp500.map(renderQuoteCard)}
+            </div>
+          </section>
         </div>
       </div>
     </div>

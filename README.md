@@ -6,6 +6,8 @@ Una plataforma completa para monitorear, analizar e invertir en el mercado de ca
 
 ### Análisis y Monitoreo
 - **📊 Dashboard en Tiempo Real**: Visualiza precios actuales, gráficos interactivos y tendencias del mercado
+- **🌎 Mercados Globales**: MERVAL, ADRs y bonos argentinos, Brasil, Japón, Corea y principales índices de EE. UU.
+- **🏛️ S&P 500**: Seguimiento de 20 empresas líderes del índice
 - **🔍 Búsqueda de Acciones**: Encuentra y analiza cualquier acción disponible
 - **📰 Noticias Financieras**: Lee noticias del mercado filtradas por acción y categoría
 - **🔔 Alertas de Precio**: Configura alertas cuando las acciones alcancen precios objetivo
