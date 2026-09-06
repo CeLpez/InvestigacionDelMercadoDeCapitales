@@ -151,7 +151,13 @@ export const marketUniverse = {
       { symbol: 'MIRG.BA', name: 'Mirgor', type: 'Acción local' },
       { symbol: 'BYMA.BA', name: 'BYMA', type: 'Acción local' },
       { symbol: 'CEPU.BA', name: 'Central Puerto', type: 'Acción local' },
-      { symbol: 'TGSU2.BA', name: 'Transportadora de Gas del Sur', type: 'Acción local' }
+      { symbol: 'TGSU2.BA', name: 'Transportadora de Gas del Sur', type: 'Acción local' },
+      { symbol: 'BMA.BA', name: 'Banco Macro', type: 'Acción local' },
+      { symbol: 'SUPV.BA', name: 'Grupo Supervielle', type: 'Acción local' },
+      { symbol: 'CRES.BA', name: 'Cresud', type: 'Acción local' },
+      { symbol: 'LOMA.BA', name: 'Loma Negra', type: 'Acción local' },
+      { symbol: 'HARG.BA', name: 'H.Argentina', type: 'Acción local' },
+      { symbol: 'TECO2.BA', name: 'Telecom Argentina', type: 'Acción local' }
     ],
     adrs: [
       { symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'ADR' },
@@ -172,7 +178,14 @@ export const marketUniverse = {
       { symbol: 'GD35.BA', name: 'Global 2035', type: 'Bono' },
       { symbol: 'AE38.BA', name: 'Global 2038', type: 'Bono' },
       { symbol: 'AL41.BA', name: 'Bonar 2041', type: 'Bono' },
-      { symbol: 'TZX26.BA', name: 'Boncer 2026', type: 'Bono CER' }
+      { symbol: 'TZX26.BA', name: 'Boncer 2026', type: 'Bono CER' },
+      { symbol: 'AL29.BA', name: 'Bonar 2029', type: 'Bono' },
+      { symbol: 'GD38.BA', name: 'Global 2038', type: 'Bono' },
+      { symbol: 'GD41.BA', name: 'Global 2041', type: 'Bono' },
+      { symbol: 'GD46.BA', name: 'Global 2046', type: 'Bono' },
+      { symbol: 'TZX27.BA', name: 'Boncer 2027', type: 'Bono CER' },
+      { symbol: 'TX28.BA', name: 'Boncer 2028', type: 'Bono CER' },
+      { symbol: 'S31O6.BA', name: 'Lecap octubre 2026', type: 'Bono tasa fija' }
     ],
     macro: [
       { symbol: 'ARS=X', name: 'Peso argentino / dólar', type: 'Tipo de cambio' },
@@ -192,7 +205,13 @@ export const marketUniverse = {
     ['META', 'Meta Platforms'], ['GOOGL', 'Alphabet'], ['AVGO', 'Broadcom'], ['BRK-B', 'Berkshire Hathaway'],
     ['GOOG', 'Alphabet C'], ['TSLA', 'Tesla'], ['LLY', 'Eli Lilly'], ['WMT', 'Walmart'],
     ['JPM', 'JPMorgan Chase'], ['V', 'Visa'], ['ORCL', 'Oracle'], ['XOM', 'Exxon Mobil'],
-    ['MA', 'Mastercard'], ['JNJ', 'Johnson & Johnson'], ['COST', 'Costco'], ['HD', 'Home Depot']
+    ['MA', 'Mastercard'], ['JNJ', 'Johnson & Johnson'], ['COST', 'Costco'], ['HD', 'Home Depot'],
+    ['META', 'Meta Platforms'], ['NFLX', 'Netflix'], ['CRM', 'Salesforce'], ['AMD', 'AMD'],
+    ['ADBE', 'Adobe'], ['QCOM', 'Qualcomm'], ['INTC', 'Intel'], ['CSCO', 'Cisco'],
+    ['UNH', 'UnitedHealth'], ['ABBV', 'AbbVie'], ['PFE', 'Pfizer'], ['MRK', 'Merck'],
+    ['CVX', 'Chevron'], ['COP', 'ConocoPhillips'], ['CAT', 'Caterpillar'], ['GE', 'GE Aerospace'],
+    ['MCD', "McDonald's"], ['NKE', 'Nike'], ['PG', 'Procter & Gamble'], ['KO', 'Coca-Cola'],
+    ['PEP', 'PepsiCo'], ['DIS', 'Disney'], ['T', 'AT&T'], ['NEE', 'NextEra Energy']
   ].map(([symbol, name]) => ({ symbol, name, type: 'Acción S&P 500' }))
 }
 
