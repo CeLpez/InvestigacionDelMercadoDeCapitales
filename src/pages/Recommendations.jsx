@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react'
-import { mockStocks } from '../services/stockService'
+import React, { useEffect, useMemo, useState } from 'react'
+import { mockStocks, stockService } from '../services/stockService'
 
 const ideas = [
   { symbol: 'AAPL', thesis: 'Ecosistema, servicios y capacidad de monetizar una base de usuarios global.', profile: 'Calidad', risk: 'Moderado', horizon: 'Largo plazo', tags: ['Tecnología', 'Calidad'] },
@@ -24,6 +24,14 @@ const ideas = [
 ]
 
 const riskClass = { Bajo: 'text-emerald-400 bg-emerald-500/10', Moderado: 'text-amber-300 bg-amber-500/10', Alto: 'text-rose-400 bg-rose-500/10' }
+const peers = {
+  AAPL: ['MSFT', 'GOOGL'], MSFT: ['AAPL', 'GOOGL'], GOOGL: ['META', 'MSFT'],
+  AMZN: ['WMT', 'TSLA'], TSLA: ['F', 'GM'], JPM: ['BAC', 'GS'],
+  NVDA: ['AMD', 'AVGO'], JNJ: ['PFE', 'ABBV'], XOM: ['CVX', 'COP'],
+  YPF: ['PAM', 'TGS'], GGAL: ['BMA', 'BBAR'], PAM: ['YPF', 'TGS'],
+  TGS: ['YPF', 'PAM'], BMA: ['GGAL', 'BBAR'], CRESY: ['LOMA', 'PAM']
+}
+const bondPeers = ['AL30.BA', 'GD30.BA', 'AL35.BA', 'GD35.BA', 'TZX26.BA', 'TX28.BA']
 
 const checklistByType = {
   Acción: [
@@ -50,6 +58,19 @@ export default function Recommendations() {
   const [filter, setFilter] = useState('Todas')
   const [selected, setSelected] = useState(null)
   const [checklist, setChecklist] = useState({})
+  const [liveData, setLiveData] = useState({})
+  const [loadingData, setLoadingData] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    const symbols = [...new Set(ideas.flatMap(idea => idea.type === 'Bono' ? [idea.symbol] : [idea.symbol, ...(peers[idea.symbol] || [])]))]
+    stockService.getMultipleStocks(symbols).then(results => {
+      if (!cancelled) setLiveData(Object.fromEntries(results.map(item => [item.symbol, item])))
+    }).finally(() => {
+      if (!cancelled) setLoadingData(false)
+    })
+    return () => { cancelled = true }
+  }, [])
   const filters = ['Todas', 'Acciones', 'ADR argentinos', 'Bonos', 'Calidad', 'Crecimiento', 'Valor', 'Renta fija', 'Bajo riesgo']
   const filteredIdeas = useMemo(() => ideas.filter(idea => filter === 'Todas' || (filter === 'Acciones' && idea.type === 'Acción') || (filter === 'ADR argentinos' && idea.type === 'ADR') || (filter === 'Bonos' && idea.type === 'Bono') || idea.profile === filter || (filter === 'Bajo riesgo' && idea.risk === 'Bajo')), [filter])
 
@@ -70,12 +91,13 @@ export default function Recommendations() {
       <div className="flex flex-wrap gap-2 mb-5">{filters.map(item => <button key={item} onClick={() => setFilter(item)} className={`px-4 py-2 rounded-full text-sm ${filter === item ? 'bg-cyan-400 text-slate-950 font-semibold' : 'bg-slate-800 text-slate-400 hover:text-white'}`}>{item}</button>)}</div>
       <section className="grid md:grid-cols-2 gap-4 mb-10">
         {filteredIdeas.map(idea => {
-          const stock = mockStocks[idea.symbol] || {}
+          const stock = { ...(mockStocks[idea.symbol] || {}), ...(liveData[idea.symbol] || {}) }
           const upside = stock.price ? ((idea.symbol === 'AAPL' ? 210 : idea.symbol === 'MSFT' ? 420 : stock.price * 1.12) / stock.price - 1) * 100 : null
           return <article key={idea.symbol} className="border border-slate-800 rounded-2xl bg-[#0c1422] p-5 hover:border-cyan-500/40 transition-colors">
             <div className="flex items-start justify-between gap-3"><div><span className="text-2xl font-semibold text-white">{idea.symbol}</span><p className="text-sm text-slate-500 mt-1">{idea.type} · {stock.company || 'Instrumento argentino'}</p></div><span className={`px-3 py-1 rounded-full text-xs font-semibold ${riskClass[idea.risk]}`}>Riesgo {idea.risk}</span></div>
-            <div className="grid grid-cols-3 gap-2 mt-5"><div><p className="text-xs text-slate-500">Precio</p><p className="text-white font-semibold">{stock.price ? `$${stock.price}` : 'Consultar'}</p></div><div><p className="text-xs text-slate-500">{idea.type === 'Bono' ? 'Moneda' : idea.type === 'ADR' ? 'Mercado' : 'P/E'}</p><p className="text-white font-semibold">{idea.type === 'Bono' ? 'ARS / USD' : idea.type === 'ADR' ? 'NYSE / Nasdaq' : (stock.pe || 'N/D')}</p></div><div><p className="text-xs text-slate-500">Cambio</p><p className={stock.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{stock.changePercent == null ? 'N/D' : `${stock.changePercent >= 0 ? '+' : ''}${stock.changePercent}%`}</p></div></div>
+            <div className="grid grid-cols-3 gap-2 mt-5"><div><p className="text-xs text-slate-500">Precio</p><p className="text-white font-semibold">{loadingData ? 'Actualizando...' : stock.price ? `$${Number(stock.price).toFixed(2)}` : 'N/D'}</p></div><div><p className="text-xs text-slate-500">{idea.type === 'Bono' ? 'Moneda' : idea.type === 'ADR' ? 'Mercado' : 'P/E'}</p><p className="text-white font-semibold">{idea.type === 'Bono' ? 'ARS / USD' : idea.type === 'ADR' ? (stock.exchange || 'NYSE / Nasdaq') : (stock.pe || 'N/D')}</p></div><div><p className="text-xs text-slate-500">Cambio</p><p className={stock.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{stock.changePercent == null ? 'N/D' : `${stock.changePercent >= 0 ? '+' : ''}${Number(stock.changePercent).toFixed(2)}%`}</p></div></div>
             <p className="text-sm text-slate-300 leading-relaxed mt-5">{idea.thesis}</p>
+            <p className="text-xs text-cyan-300 mt-3">Sector: {stock.sector || (idea.type === 'Bono' ? 'Renta fija argentina' : 'Consultar perfil')}</p>
             <div className="flex flex-wrap gap-2 mt-4">{idea.tags.map(tag => <span key={tag} className="text-xs px-2 py-1 rounded bg-slate-900 text-slate-400">{tag}</span>)}<span className="text-xs px-2 py-1 rounded bg-slate-900 text-slate-400">{idea.horizon}</span></div>
             <button onClick={() => { setSelected({ ...idea, stock, upside }); setChecklist({}) }} className="w-full mt-5 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-cyan-500 hover:text-slate-950 font-medium transition-colors">Ver tesis y checklist</button>
           </article>
@@ -85,6 +107,10 @@ export default function Recommendations() {
       {selected && <section className="border border-cyan-500/30 rounded-2xl bg-cyan-500/5 p-6 mb-10">
         <div className="flex justify-between items-start"><div><p className="text-xs uppercase tracking-wider text-cyan-300">Evaluación guiada · {selected.type}</p><h3 className="text-2xl text-white font-semibold mt-2">{selected.symbol} · {selected.profile}</h3></div><button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white">×</button></div>
         <div className="mt-5 border border-slate-800 bg-slate-900/50 rounded-xl p-4"><p className="text-xs uppercase tracking-wider text-slate-500">Tesis de trabajo</p><p className="text-white leading-relaxed mt-2">{selected.thesis}</p><p className="text-sm text-slate-400 mt-3">Antes de decidir, escribí qué tendría que ocurrir para que esta tesis sea correcta y qué evidencia te haría cambiar de opinión.</p></div>
+        <div className="mt-5 border border-slate-800 bg-slate-900/40 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3"><div><p className="text-xs uppercase tracking-wider text-slate-500">Comparación y sector</p><p className="text-sm text-slate-300 mt-1">Pares del mismo sector o grupo de renta fija</p></div><span className="text-xs text-cyan-300">{selected.stock?.sector || (selected.type === 'Bono' ? 'Renta fija argentina' : 'Sector pendiente')}</span></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead><tr className="border-b border-slate-800"><th className="py-2 pr-3 text-slate-500">Instrumento</th><th className="py-2 px-3 text-slate-500">Precio</th><th className="py-2 px-3 text-slate-500">Cambio</th><th className="py-2 px-3 text-slate-500">P/E</th></tr></thead><tbody>{[selected.symbol, ...(selected.type === 'Bono' ? bondPeers.filter(symbol => symbol !== selected.symbol).slice(0, 3) : (peers[selected.symbol] || []))].map(symbol => { const data = { ...(mockStocks[symbol] || {}), ...(liveData[symbol] || {}) }; return <tr key={symbol} className={symbol === selected.symbol ? 'text-cyan-300' : 'text-slate-300'}><td className="py-2 pr-3 font-medium">{symbol}</td><td className="py-2 px-3">{data.price ? `$${Number(data.price).toFixed(2)}` : 'N/D'}</td><td className="py-2 px-3">{data.changePercent == null ? 'N/D' : `${Number(data.changePercent) >= 0 ? '+' : ''}${Number(data.changePercent).toFixed(2)}%`}</td><td className="py-2 px-3">{selected.type === 'Bono' ? 'Renta fija' : data.pe || 'N/D'}</td></tr> })}</tbody></table></div>
+        </div>
         <div className="flex items-center justify-between mt-6 mb-3"><div><h4 className="text-lg font-semibold text-white">Checklist de decisión</h4><p className="text-sm text-slate-400">Marcá cada eje solo cuando hayas verificado la información.</p></div><span className="text-sm text-cyan-300">{Object.values(checklist).filter(Boolean).length}/4 completos</span></div>
         <div className="space-y-3">{(checklistByType[selected.type] || checklistByType.Acción).map(([title, question, guidance]) => <div key={title} className={`border rounded-xl p-4 ${checklist[title] ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-slate-800 bg-slate-900/40'}`}><div className="flex items-start gap-3"><input type="checkbox" checked={Boolean(checklist[title])} onChange={event => setChecklist({ ...checklist, [title]: event.target.checked })} className="mt-1 accent-emerald-400" /><div className="flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-white">{title}</p><span className="text-xs text-slate-500">{checklist[title] ? 'Verificado' : 'Pendiente'}</span></div><p className="text-sm text-slate-300 mt-2">{question}</p><p className="text-xs text-slate-500 mt-2">Guía: {guidance}</p></div></div></div>)}</div>
         <div className="grid md:grid-cols-3 gap-3 mt-6"><div className="bg-slate-900/60 rounded-lg p-4"><p className="text-xs text-slate-500">Preparación</p><p className="text-xl font-semibold text-white mt-1">{Object.values(checklist).filter(Boolean).length < 4 ? 'En análisis' : 'Checklist completo'}</p></div><div className="bg-slate-900/60 rounded-lg p-4"><p className="text-xs text-slate-500">Riesgo declarado</p><p className={`text-xl font-semibold mt-1 ${riskClass[selected.risk].split(' ')[0]}`}>{selected.risk}</p></div><div className="bg-slate-900/60 rounded-lg p-4"><p className="text-xs text-slate-500">Horizonte</p><p className="text-xl font-semibold text-white mt-1">{selected.horizon}</p></div></div>
