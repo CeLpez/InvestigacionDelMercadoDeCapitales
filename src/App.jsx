@@ -7,6 +7,10 @@ import CompetitorComparison from './pages/CompetitorComparison'
 import SectorAnalysis from './pages/SectorAnalysis'
 import Portfolio from './pages/Portfolio'
 import Recommendations from './pages/Recommendations'
+import PriceAlerts from './pages/PriceAlerts'
+import TransactionHistory from './pages/TransactionHistory'
+import ReturnSimulator from './pages/ReturnSimulator'
+import FinancialNews from './pages/FinancialNews'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -18,7 +22,11 @@ export default function App() {
     comparison: <CompetitorComparison />,
     sectors: <SectorAnalysis />,
     portfolio: <Portfolio />,
-    recommendations: <Recommendations />
+    recommendations: <Recommendations />,
+    alerts: <PriceAlerts />,
+    history: <TransactionHistory />,
+    simulator: <ReturnSimulator />,
+    news: <FinancialNews />
   }
 
   return (

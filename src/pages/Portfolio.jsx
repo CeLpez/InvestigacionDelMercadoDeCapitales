@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { usePortfolioStore } from '../store/index'
 import { mockStocks } from '../services/stockService'
+import { exportPortfolioToCSV } from '../services/exportService'
 
 export default function Portfolio() {
   const { portfolio, addStock, removeStock, updateStock } = usePortfolioStore()
@@ -13,6 +14,10 @@ export default function Portfolio() {
     setShowAddForm(false)
   }
 
+  const handleExport = () => {
+    exportPortfolioToCSV(portfolio, `portafolio-${new Date().toISOString().split('T')[0]}.csv`)
+  }
+
   const totalValue = portfolio.reduce((sum, s) => sum + (s.price * s.quantity), 0)
   const totalCost = portfolio.reduce((sum, s) => sum + (s.purchasePrice * s.quantity), 0)
   const totalGain = totalValue - totalCost
@@ -22,12 +27,22 @@ export default function Portfolio() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-bold">💼 Mi Portafolio</h2>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium transition-all"
-        >
-          ➕ Agregar Acción
-        </button>
+        <div className="flex gap-2">
+          {portfolio.length > 0 && (
+            <button
+              onClick={handleExport}
+              className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium transition-all"
+            >
+              📥 Exportar CSV
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium transition-all"
+          >
+            ➕ Agregar Acción
+          </button>
+        </div>
       </div>
 
       {/* Resumen del portafolio */}

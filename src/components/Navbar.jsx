@@ -8,6 +8,10 @@ export default function Navbar({ currentPage, setCurrentPage }) {
     { id: 'comparison', label: '⚖️ Comparar' },
     { id: 'sectors', label: '🏢 Sectores' },
     { id: 'portfolio', label: '💼 Portafolio' },
+    { id: 'history', label: '📜 Historial' },
+    { id: 'alerts', label: '🔔 Alertas' },
+    { id: 'simulator', label: '📈 Simulador' },
+    { id: 'news', label: '📰 Noticias' },
     { id: 'recommendations', label: '💡 Recomendaciones' }
   ]
 
