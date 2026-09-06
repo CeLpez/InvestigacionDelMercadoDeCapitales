@@ -1,17 +1,66 @@
 import React, { useState } from 'react'
 import { usePortfolioStore } from '../store/index'
-import { mockStocks } from '../services/stockService'
+import { mockStocks, stockService } from '../services/stockService'
 import { exportPortfolioToCSV } from '../services/exportService'
 
 export default function Portfolio() {
   const { portfolio, addStock, removeStock, updateStock } = usePortfolioStore()
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedSymbol, setSelectedSymbol] = useState('AAPL')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [selectedStock, setSelectedStock] = useState(null)
+  const [quantity, setQuantity] = useState('1')
+  const [purchasePrice, setPurchasePrice] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  const searchStocks = async () => {
+    const query = searchTerm.trim()
+    if (query.length < 1) return
+    setSearching(true)
+    setFormError('')
+    try {
+      const remote = await stockService.searchSymbol(query)
+      const results = remote.length
+        ? await Promise.all(remote.slice(0, 8).map(async result => {
+          try {
+            return await stockService.getStockData(result.symbol)
+          } catch {
+            return { ...result, ...(mockStocks[result.symbol] || {}) }
+          }
+        }))
+        : Object.values(mockStocks).filter(stock => stock.symbol.includes(query.toUpperCase()))
+      setSearchResults(results)
+    } catch {
+      setSearchResults(Object.values(mockStocks).filter(stock =>
+        stock.symbol.includes(query.toUpperCase()) ||
+        stock.company.toLowerCase().includes(query.toLowerCase())
+      ))
+      setFormError('No se pudo consultar el proveedor; puedes usar una coincidencia local.')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const selectStock = (stock) => {
+    setSelectedStock(stock)
+    setPurchasePrice(stock.price ? String(stock.price) : '')
+    setSearchResults([])
+  }
 
   const handleAddStock = () => {
-    const stock = mockStocks[selectedSymbol]
-    addStock(stock)
+    const price = Number(purchasePrice)
+    const shares = Number(quantity)
+    if (!selectedStock || !Number.isFinite(price) || price <= 0 || !Number.isFinite(shares) || shares <= 0) {
+      setFormError('Selecciona una acción e indica una cantidad y precio válidos.')
+      return
+    }
+    addStock(selectedStock, shares, price)
     setShowAddForm(false)
+    setSelectedStock(null)
+    setSearchTerm('')
+    setQuantity('1')
+    setPurchasePrice('')
   }
 
   const handleExport = () => {
@@ -72,22 +121,49 @@ export default function Portfolio() {
       {/* Formulario para agregar acción */}
       {showAddForm && (
         <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6 mb-8">
-          <h3 className="text-xl font-bold mb-4">Agregar Nueva Acción</h3>
-          <div className="flex gap-4">
-            <select
-              value={selectedSymbol}
-              onChange={(e) => setSelectedSymbol(e.target.value)}
-              className="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-            >
-              {Object.keys(mockStocks).map(symbol => (
-                <option key={symbol} value={symbol}>{symbol}</option>
+          <h3 className="text-xl font-bold mb-2">Agregar cualquier acción</h3>
+          <p className="text-sm text-slate-400 mb-4">Busca por ticker o nombre en los mercados disponibles.</p>
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && searchStocks()}
+              placeholder="Ej.: YPF, GGAL, NVDA, Coca-Cola..."
+              className="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white"
+            />
+            <button onClick={searchStocks} disabled={searching} className="bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 px-5 py-2 rounded-lg font-medium">
+              {searching ? 'Buscando...' : 'Buscar'}
+            </button>
+          </div>
+          {formError && <p className="text-amber-400 text-sm mt-3">{formError}</p>}
+          {searchResults.length > 0 && (
+            <div className="mt-3 grid md:grid-cols-2 gap-2">
+              {searchResults.map(stock => (
+                <button key={stock.symbol} onClick={() => selectStock(stock)} className="text-left p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-500">
+                  <span className="font-bold text-cyan-400">{stock.symbol}</span>
+                  <span className="text-sm text-slate-400 ml-2">{stock.company}</span>
+                  <span className="block text-xs text-slate-500 mt-1">{stock.exchange || 'Mercado público'} · ${stock.price?.toFixed?.(2) || 'N/D'}</span>
+                </button>
               ))}
-            </select>
+            </div>
+          )}
+          {selectedStock && (
+            <div className="mt-4 grid md:grid-cols-3 gap-3">
+              <div className="md:col-span-1 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+                <p className="font-bold text-cyan-300">{selectedStock.symbol}</p>
+                <p className="text-sm text-slate-400">{selectedStock.company}</p>
+              </div>
+              <input type="number" min="0.0001" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="Cantidad" className="px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white" />
+              <input type="number" min="0.0001" step="any" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} placeholder="Precio de compra" className="px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white" />
+            </div>
+          )}
+          <div className="flex gap-3 mt-4">
             <button
               onClick={handleAddStock}
+              disabled={!selectedStock}
               className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-medium transition-all"
             >
-              Agregar
+              Agregar al portafolio
             </button>
             <button
               onClick={() => setShowAddForm(false)}

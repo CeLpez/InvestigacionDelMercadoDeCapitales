@@ -5,8 +5,13 @@ export const usePortfolioStore = create(persist((set, get) => ({
   portfolio: [],
   watchlist: [],
 
-  addStock: (stock) => set(state => ({
-    portfolio: [...state.portfolio, { ...stock, quantity: 1, purchasePrice: stock.price, id: Date.now() }]
+  addStock: (stock, quantity = 1, purchasePrice = stock.price) => set(state => ({
+    portfolio: [...state.portfolio, {
+      ...stock,
+      quantity: Number(quantity),
+      purchasePrice: Number(purchasePrice),
+      id: `${stock.symbol}-${Date.now()}`
+    }]
   })),
 
   removeStock: (id) => set(state => ({
