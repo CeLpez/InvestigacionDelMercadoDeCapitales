@@ -27,11 +27,54 @@ export const stockService = {
         pe: null,
         dividend: null,
         sector: 'N/D',
-        currency: meta.currency || 'USD'
+        currency: meta.currency || 'USD',
+        exchange: meta.exchangeName || meta.exchange || 'N/D',
+        volume: meta.regularMarketVolume ?? null,
+        marketState: meta.marketState || 'N/D',
+        fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh ?? null,
+        fiftyTwoWeekLow: meta.fiftyTwoWeekLow ?? null
       }
     } catch (error) {
       console.error('Error fetching stock data:', error)
       throw error
+    }
+  },
+
+  async getCompanyProfile(symbol) {
+    try {
+      const response = await axios.get(`${API_BASE}/v10/finance/quoteSummary/${symbol}`, {
+        params: {
+          modules: 'price,summaryDetail,defaultKeyStatistics,assetProfile'
+        }
+      })
+      const result = response.data.quoteSummary.result?.[0]
+      if (!result) throw new Error(`No profile data for ${symbol}`)
+
+      const price = result.price || {}
+      const detail = result.summaryDetail || {}
+      const statistics = result.defaultKeyStatistics || {}
+      const profile = result.assetProfile || {}
+
+      return {
+        symbol,
+        company: price.longName?.raw || price.shortName?.raw || symbol,
+        price: price.regularMarketPrice?.raw ?? null,
+        marketCap: detail.marketCap?.raw ?? null,
+        pe: detail.trailingPE?.raw ?? null,
+        forwardPe: statistics.forwardPE?.raw ?? null,
+        dividend: detail.dividendRate?.raw ?? null,
+        dividendYield: detail.dividendYield?.raw ?? null,
+        beta: statistics.beta?.raw ?? null,
+        eps: statistics.trailingEps?.raw ?? null,
+        sector: profile.sector || 'N/D',
+        industry: profile.industry || 'N/D',
+        employees: profile.fullTimeEmployees || null,
+        website: profile.website || '',
+        summary: profile.longBusinessSummary || ''
+      }
+    } catch (error) {
+      console.warn(`No se pudo cargar el perfil de ${symbol}:`, error.message)
+      return null
     }
   },
 
@@ -98,6 +141,18 @@ export const stockService = {
 export const marketUniverse = {
   argentina: {
     index: [{ symbol: '^MERV', name: 'MERVAL', type: 'Índice' }],
+    localStocks: [
+      { symbol: 'GGAL.BA', name: 'Grupo Financiero Galicia', type: 'Acción local' },
+      { symbol: 'YPFD.BA', name: 'YPF', type: 'Acción local' },
+      { symbol: 'PAMP.BA', name: 'Pampa Energía', type: 'Acción local' },
+      { symbol: 'TXAR.BA', name: 'Ternium Argentina', type: 'Acción local' },
+      { symbol: 'ALUA.BA', name: 'Aluar', type: 'Acción local' },
+      { symbol: 'COME.BA', name: 'Sociedad Comercial del Plata', type: 'Acción local' },
+      { symbol: 'MIRG.BA', name: 'Mirgor', type: 'Acción local' },
+      { symbol: 'BYMA.BA', name: 'BYMA', type: 'Acción local' },
+      { symbol: 'CEPU.BA', name: 'Central Puerto', type: 'Acción local' },
+      { symbol: 'TGSU2.BA', name: 'Transportadora de Gas del Sur', type: 'Acción local' }
+    ],
     adrs: [
       { symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'ADR' },
       { symbol: 'YPF', name: 'YPF', type: 'ADR' },
@@ -114,7 +169,14 @@ export const marketUniverse = {
       { symbol: 'AL30.BA', name: 'Bonar 2030', type: 'Bono' },
       { symbol: 'GD30.BA', name: 'Global 2030', type: 'Bono' },
       { symbol: 'AL35.BA', name: 'Bonar 2035', type: 'Bono' },
-      { symbol: 'GD35.BA', name: 'Global 2035', type: 'Bono' }
+      { symbol: 'GD35.BA', name: 'Global 2035', type: 'Bono' },
+      { symbol: 'AE38.BA', name: 'Global 2038', type: 'Bono' },
+      { symbol: 'AL41.BA', name: 'Bonar 2041', type: 'Bono' },
+      { symbol: 'TZX26.BA', name: 'Boncer 2026', type: 'Bono CER' }
+    ],
+    macro: [
+      { symbol: 'ARS=X', name: 'Peso argentino / dólar', type: 'Tipo de cambio' },
+      { symbol: 'BTC-USD', name: 'Bitcoin / dólar', type: 'Referencia' }
     ]
   },
   global: [
@@ -136,8 +198,10 @@ export const marketUniverse = {
 
 export const getMarketUniverse = () => [
   ...marketUniverse.argentina.index,
+  ...marketUniverse.argentina.localStocks,
   ...marketUniverse.argentina.adrs,
   ...marketUniverse.argentina.bonds,
+  ...marketUniverse.argentina.macro,
   ...marketUniverse.global,
   ...marketUniverse.sp500
 ]

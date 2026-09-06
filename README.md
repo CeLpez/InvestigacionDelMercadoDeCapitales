@@ -9,11 +9,13 @@ Una plataforma completa para monitorear, analizar e invertir en el mercado de ca
 - **🌎 Mercados Globales**: MERVAL, ADRs y bonos argentinos, Brasil, Japón, Corea y principales índices de EE. UU.
 - **🏛️ S&P 500**: Seguimiento de 20 empresas líderes del índice
 - **🔍 Búsqueda de Acciones**: Encuentra y analiza cualquier acción disponible
+- **🏢 Perfiles empresariales**: Consulta valoración, beta, EPS, dividendos, sector, industria y descripción
 - **📰 Noticias Financieras**: Lee noticias del mercado filtradas por acción y categoría
 - **🔔 Alertas de Precio**: Configura alertas cuando las acciones alcancen precios objetivo
 
 ### Educación e Información
 - **📚 Educación del Mercado**: Aprende conceptos fundamentales, estrategias e indicadores
+- **🇦🇷 Educación argentina**: Diferencias entre acciones locales, ADRs, bonos hard-dollar, CER y tipo de cambio
 - **⚖️ Comparador de Competidores**: Compara múltiples empresas con ventajas/desventajas
 - **🏢 Análisis por Sectores**: Sectoriza el mercado y analiza tendencias por industria
 - **💡 Recomendaciones**: Recibe sugerencias de inversión basadas en análisis técnico y fundamental

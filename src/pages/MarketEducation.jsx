@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 export default function MarketEducation() {
+  const [activeLevel, setActiveLevel] = useState('principiante')
+  const [showAnswer, setShowAnswer] = useState(false)
   const sections = [
     {
       title: '¿Qué es el Mercado de Capitales?',
@@ -56,6 +58,59 @@ export default function MarketEducation() {
                 <h3 className="text-xl font-bold mb-2">{section.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{section.content}</p>
               </div>
+
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {[
+                    ['principiante', 'Ruta inicial'],
+                    ['intermedio', 'Análisis'],
+                    ['argentina', 'Mercado argentino']
+                  ].map(([level, label]) => (
+                    <button
+                      key={level}
+                      onClick={() => setActiveLevel(level)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                        activeLevel === level ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40' : 'bg-slate-900/60 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {activeLevel === 'principiante' && (
+                  <div>
+                    <h3 className="text-xl font-bold mb-2">Cómo empezar sin improvisar</h3>
+                    <p className="text-slate-400 mb-4">Antes de invertir, define objetivo, plazo, moneda y pérdida máxima tolerable.</p>
+                    <div className="grid md:grid-cols-3 gap-3">
+                      {['1. Crea un fondo de emergencia', '2. Elige una asignación diversificada', '3. Invierte periódicamente'].map(item => (
+                        <div key={item} className="bg-slate-900/60 rounded-lg p-4 text-sm text-slate-300">{item}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {activeLevel === 'intermedio' && (
+                  <div>
+                    <h3 className="text-xl font-bold mb-2">Lectura de una empresa</h3>
+                    <p className="text-slate-400 mb-4">Combina crecimiento, rentabilidad, deuda, valoración y generación de caja. Una métrica aislada nunca es una tesis completa.</p>
+                    <div className="grid md:grid-cols-4 gap-3">
+                      {['Ingresos y crecimiento', 'Margen operativo', 'Deuda neta / EBITDA', 'Flujo de caja libre'].map(item => (
+                        <div key={item} className="bg-slate-900/60 rounded-lg p-4 text-sm text-slate-300">{item}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {activeLevel === 'argentina' && (
+                  <div>
+                    <h3 className="text-xl font-bold mb-2">Particularidades de Argentina</h3>
+                    <p className="text-slate-400 mb-4">Considera inflación, riesgo soberano, tipo de cambio, liquidez y la diferencia entre cotización local, ADR y CEDEAR.</p>
+                    <div className="grid md:grid-cols-3 gap-3">
+                      {['Acciones y ADRs', 'Bonos hard-dollar y CER', 'Dólar, inflación y tasas'].map(item => (
+                        <div key={item} className="bg-slate-900/60 rounded-lg p-4 text-sm text-slate-300">{item}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -93,6 +148,19 @@ export default function MarketEducation() {
           <li>✅ Sigue noticias financieras y eventos económicos</li>
           <li>✅ No inviertas dinero que necesites en corto plazo</li>
         </ul>
+      </div>
+
+      <div className="mt-8 bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+        <h3 className="text-xl font-bold mb-3">🧠 Mini chequeo</h3>
+        <p className="text-slate-300">¿Qué reduce más el riesgo específico de una empresa?</p>
+        <div className="flex flex-wrap gap-2 mt-4">
+          {['Comprar solo después de una subida', 'Diversificar entre activos y sectores', 'Usar siempre una acción de moda'].map(option => (
+            <button key={option} onClick={() => setShowAnswer(option === 'Diversificar entre activos y sectores')} className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm text-slate-300 hover:border-cyan-500/50">
+              {option}
+            </button>
+          ))}
+        </div>
+        {showAnswer && <p className="text-emerald-400 text-sm mt-4">Correcto: la diversificación reduce la exposición a un único emisor o sector.</p>}
       </div>
     </div>
   )

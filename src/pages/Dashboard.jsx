@@ -234,10 +234,22 @@ export default function Dashboard() {
                 {marketUniverse.argentina.adrs.map(renderQuoteCard)}
               </div>
             </div>
+            <div className="mb-5">
+              <h4 className="text-sm font-medium text-slate-400 mb-3">Acciones locales</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {marketUniverse.argentina.localStocks.map(renderQuoteCard)}
+              </div>
+            </div>
             <div>
               <h4 className="text-sm font-medium text-slate-400 mb-3">Bonos soberanos</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {marketUniverse.argentina.bonds.map(renderQuoteCard)}
+              </div>
+              <div className="mt-5">
+                <h4 className="text-sm font-medium text-slate-400 mb-3">Referencias y macro</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {marketUniverse.argentina.macro.map(renderQuoteCard)}
+                </div>
               </div>
             </div>
         </section>

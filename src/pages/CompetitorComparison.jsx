@@ -1,8 +1,26 @@
-import React, { useState } from 'react'
-import { mockStocks } from '../services/stockService'
+import React, { useEffect, useState } from 'react'
+import { mockStocks, stockService } from '../services/stockService'
 
 export default function CompetitorComparison() {
   const [selectedStocks, setSelectedStocks] = useState(['AAPL', 'MSFT'])
+  const [quotes, setQuotes] = useState(mockStocks)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    stockService.getMultipleStocks(selectedStocks).then(results => {
+      if (!cancelled) {
+        setQuotes(current => ({
+          ...current,
+          ...Object.fromEntries(results.map(stock => [stock.symbol, { ...current[stock.symbol], ...stock }]))
+        }))
+      }
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [selectedStocks])
 
   const toggleStock = (symbol) => {
     setSelectedStocks(prev =>
@@ -64,7 +82,7 @@ export default function CompetitorComparison() {
       {/* Tabla comparativa */}
       {selectedStocks.length > 0 && (
         <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6 mb-8 overflow-x-auto">
-          <h3 className="text-xl font-bold mb-4">Métricas Comparativas</h3>
+          <h3 className="text-xl font-bold mb-4">Métricas Comparativas {loading && <span className="text-sm text-slate-500 font-normal">Actualizando...</span>}</h3>
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-slate-600">
@@ -80,13 +98,13 @@ export default function CompetitorComparison() {
                   <td className="px-4 py-3 font-medium">{metric.label}</td>
                   {selectedStocks.map(symbol => (
                     <td key={`${symbol}-${metric.key}`} className="px-4 py-3">
-                      {metric.key === 'price' && `$${mockStocks[symbol][metric.key]}`}
-                      {metric.key === 'marketCap' && mockStocks[symbol][metric.key]}
-                      {metric.key === 'pe' && mockStocks[symbol][metric.key]}
-                      {metric.key === 'dividend' && `$${mockStocks[symbol][metric.key]}`}
+                      {metric.key === 'price' && (quotes[symbol]?.price ? `$${quotes[symbol].price.toFixed(2)}` : 'N/D')}
+                      {metric.key === 'marketCap' && (quotes[symbol]?.marketCap || 'N/D')}
+                      {metric.key === 'pe' && (quotes[symbol]?.pe ?? 'N/D')}
+                      {metric.key === 'dividend' && (quotes[symbol]?.dividend == null ? 'N/D' : `$${quotes[symbol].dividend}`)}
                       {metric.key === 'changePercent' && (
-                        <span className={mockStocks[symbol][metric.key] > 0 ? 'text-green-400' : 'text-red-400'}>
-                          {mockStocks[symbol][metric.key] > 0 ? '+' : ''}{mockStocks[symbol][metric.key]}%
+                        <span className={quotes[symbol]?.changePercent > 0 ? 'text-green-400' : 'text-red-400'}>
+                          {quotes[symbol]?.changePercent > 0 ? '+' : ''}{Number(quotes[symbol]?.changePercent || 0).toFixed(2)}%
                         </span>
                       )}
                     </td>
