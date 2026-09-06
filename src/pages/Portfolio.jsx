@@ -29,14 +29,21 @@ export default function Portfolio() {
             return { ...result, ...(mockStocks[result.symbol] || {}) }
           }
         }))
-        : Object.values(mockStocks).filter(stock => stock.symbol.includes(query.toUpperCase()))
+        : [await stockService.getStockData(query.toUpperCase())]
       setSearchResults(results)
     } catch {
-      setSearchResults(Object.values(mockStocks).filter(stock =>
-        stock.symbol.includes(query.toUpperCase()) ||
-        stock.company.toLowerCase().includes(query.toLowerCase())
-      ))
-      setFormError('No se pudo consultar el proveedor; puedes usar una coincidencia local.')
+      try {
+        const directQuote = await stockService.getStockData(query.toUpperCase())
+        setSearchResults([directQuote])
+        setFormError('')
+      } catch {
+        const fallback = Object.values(mockStocks).filter(stock =>
+          stock.symbol.includes(query.toUpperCase()) ||
+          stock.company.toLowerCase().includes(query.toLowerCase())
+        )
+        setSearchResults(fallback)
+        setFormError(fallback.length ? 'Mostrando coincidencias locales.' : 'No se encontró ese ticker. Prueba con el símbolo exacto, por ejemplo YPF, GGAL o NVDA.')
+      }
     } finally {
       setSearching(false)
     }
