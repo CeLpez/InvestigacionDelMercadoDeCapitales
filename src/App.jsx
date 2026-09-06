@@ -69,7 +69,7 @@ export default function App() {
         userEmail={session?.user?.email}
         onSignOut={isSupabaseConfigured ? () => authService.signOut() : undefined}
       />
-      <main className="pt-20">
+      <main className="pt-28 lg:pt-24">
         {pages[currentPage]}
       </main>
     </div>
