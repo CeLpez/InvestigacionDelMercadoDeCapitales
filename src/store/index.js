@@ -22,9 +22,11 @@ export const usePortfolioStore = create(persist((set, get) => ({
     portfolio: state.portfolio.map(s => s.id === id ? { ...s, ...updates } : s)
   })),
 
-  addToWatchlist: (stock) => set(state => ({
-    watchlist: [...state.watchlist, { ...stock, id: Date.now() }]
-  })),
+  addToWatchlist: (stock) => set(state => (
+    state.watchlist.some(item => item.symbol === stock.symbol)
+      ? state
+      : { watchlist: [...state.watchlist, { ...stock, id: `${stock.symbol}-${Date.now()}` }] }
+  )),
 
   removeFromWatchlist: (id) => set(state => ({
     watchlist: state.watchlist.filter(s => s.id !== id)
@@ -32,13 +34,13 @@ export const usePortfolioStore = create(persist((set, get) => ({
 
   getPortfolioValue: () => {
     const { portfolio } = get()
-    return portfolio.reduce((total, stock) => total + (stock.price * stock.quantity), 0)
+    return portfolio.reduce((total, stock) => total + ((Number(stock.price) || 0) * (Number(stock.quantity) || 0)), 0)
   },
 
   getPortfolioReturn: () => {
     const { portfolio } = get()
     const currentValue = get().getPortfolioValue()
-    const initialValue = portfolio.reduce((total, stock) => total + (stock.purchasePrice * stock.quantity), 0)
+    const initialValue = portfolio.reduce((total, stock) => total + ((Number(stock.purchasePrice) || 0) * (Number(stock.quantity) || 0)), 0)
     return currentValue - initialValue
   }
 }), {

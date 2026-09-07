@@ -4,14 +4,86 @@ import axios from 'axios'
 // La misma ruta funciona con el proxy de Vite en desarrollo y con la función
 // serverless de Vercel en producción.
 const API_BASE = '/api/yahoo'
+const CACHE_PREFIX = 'capital-markets-cache:'
+const memoryCache = new Map()
+const CACHE_TTL = {
+  quote: 2 * 60 * 1000,
+  profile: 15 * 60 * 1000,
+  historical: 10 * 60 * 1000,
+  search: 15 * 60 * 1000
+}
+
+const getStorage = () => {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage : null
+  } catch {
+    return null
+  }
+}
+
+const readCache = (key, ttl) => {
+  const now = Date.now()
+  const inMemory = memoryCache.get(key)
+  if (inMemory && now - inMemory.timestamp < ttl) return inMemory.value
+
+  const storage = getStorage()
+  if (!storage) return null
+
+  try {
+    const stored = JSON.parse(storage.getItem(`${CACHE_PREFIX}${key}`) || 'null')
+    if (stored && now - stored.timestamp < ttl) {
+      memoryCache.set(key, stored)
+      return stored.value
+    }
+    storage.removeItem(`${CACHE_PREFIX}${key}`)
+  } catch {
+    // La caché es opcional: una entrada inválida no debe interrumpir una consulta.
+  }
+  return null
+}
+
+const writeCache = (key, value) => {
+  const entry = { timestamp: Date.now(), value }
+  memoryCache.set(key, entry)
+  const storage = getStorage()
+  if (storage) {
+    try {
+      storage.setItem(`${CACHE_PREFIX}${key}`, JSON.stringify(entry))
+    } catch {
+      // El modo privado o el límite de almacenamiento no deben bloquear la app.
+    }
+  }
+  return value
+}
+
+const requestJson = async (key, ttl, url, config) => {
+  const cached = readCache(key, ttl)
+  if (cached !== null) return cached
+  const response = await axios.get(url, config)
+  return writeCache(key, response.data)
+}
+
+export const clearMarketCache = () => {
+  memoryCache.clear()
+  const storage = getStorage()
+  if (!storage) return
+  try {
+    Object.keys(storage)
+      .filter(key => key.startsWith(CACHE_PREFIX))
+      .forEach(key => storage.removeItem(key))
+  } catch {
+    // No-op: limpiar la caché no es crítico para el funcionamiento.
+  }
+}
 
 export const stockService = {
   async getStockData(symbol) {
     try {
-      const response = await axios.get(`${API_BASE}/v8/finance/chart/${symbol}`, {
+      const normalizedSymbol = symbol.trim().toUpperCase()
+      const data = await requestJson(`quote:${normalizedSymbol}`, CACHE_TTL.quote, `${API_BASE}/v8/finance/chart/${encodeURIComponent(normalizedSymbol)}`, {
         params: { interval: '1d', range: '5d' }
       })
-      const result = response.data.chart.result?.[0]
+      const result = data.chart.result?.[0]
       if (!result?.meta) throw new Error(`No quote data for ${symbol}`)
 
       const meta = result.meta
@@ -44,12 +116,13 @@ export const stockService = {
 
   async getCompanyProfile(symbol) {
     try {
-      const response = await axios.get(`${API_BASE}/v10/finance/quoteSummary/${symbol}`, {
+      const normalizedSymbol = symbol.trim().toUpperCase()
+      const data = await requestJson(`profile:${normalizedSymbol}`, CACHE_TTL.profile, `${API_BASE}/v10/finance/quoteSummary/${encodeURIComponent(normalizedSymbol)}`, {
         params: {
           modules: 'price,summaryDetail,defaultKeyStatistics,assetProfile'
         }
       })
-      const result = response.data.quoteSummary.result?.[0]
+      const result = data.quoteSummary.result?.[0]
       if (!result) throw new Error(`No profile data for ${symbol}`)
 
       const price = result.price || {}
@@ -86,7 +159,9 @@ export const stockService = {
 
     for (const host of hosts) {
       try {
-        const response = await axios.get(
+        const data = await requestJson(
+          `historical:${symbol}:${interval}:${range}`,
+          CACHE_TTL.historical,
           `${host}/v8/finance/chart/${encodeURIComponent(symbol)}`,
           {
             params: { interval, range },
@@ -94,7 +169,7 @@ export const stockService = {
             headers: { Accept: 'application/json' }
           }
         )
-        const result = response.data.chart.result?.[0]
+        const result = data.chart.result?.[0]
         if (!result) throw new Error(`No historical data for ${symbol}`)
         return result
       } catch (error) {
@@ -108,10 +183,11 @@ export const stockService = {
 
   async searchSymbol(query) {
     try {
-      const response = await axios.get(`${API_BASE}/v1/finance/search`, {
+      const normalizedQuery = query.trim().toLowerCase()
+      const data = await requestJson(`search:${normalizedQuery}`, CACHE_TTL.search, `${API_BASE}/v1/finance/search`, {
         params: { q: query, lang: 'es', quotesCount: 10, newsCount: 0 }
       })
-      return (response.data.quotes || [])
+      return (data.quotes || [])
         .filter(quote => quote.quoteType === 'EQUITY')
         .map(quote => ({
           symbol: quote.symbol,
@@ -128,9 +204,10 @@ export const stockService = {
   async getMultipleStocks(symbols) {
     const results = []
     const concurrency = 6
+    const uniqueSymbols = [...new Set(symbols)]
 
-    for (let index = 0; index < symbols.length; index += concurrency) {
-      const batch = symbols.slice(index, index + concurrency)
+    for (let index = 0; index < uniqueSymbols.length; index += concurrency) {
+      const batch = uniqueSymbols.slice(index, index + concurrency)
       const batchResults = await Promise.all(batch.map(async symbol => {
         try {
           return await this.getStockData(symbol)
@@ -149,51 +226,58 @@ export const stockService = {
 export const marketUniverse = {
   argentina: {
     index: [{ symbol: '^MERV', name: 'MERVAL', type: 'Índice' }],
+    // La moneda de cotización es una característica estructural del instrumento
+    // (no una cotización en vivo): acciones locales cotizan en pesos en BYMA y
+    // los ADR cotizan en dólares en bolsas de EE. UU.
     localStocks: [
-      { symbol: 'GGAL.BA', name: 'Grupo Financiero Galicia', type: 'Acción local' },
-      { symbol: 'YPFD.BA', name: 'YPF', type: 'Acción local' },
-      { symbol: 'PAMP.BA', name: 'Pampa Energía', type: 'Acción local' },
-      { symbol: 'TXAR.BA', name: 'Ternium Argentina', type: 'Acción local' },
-      { symbol: 'ALUA.BA', name: 'Aluar', type: 'Acción local' },
-      { symbol: 'COME.BA', name: 'Sociedad Comercial del Plata', type: 'Acción local' },
-      { symbol: 'MIRG.BA', name: 'Mirgor', type: 'Acción local' },
-      { symbol: 'BYMA.BA', name: 'BYMA', type: 'Acción local' },
-      { symbol: 'CEPU.BA', name: 'Central Puerto', type: 'Acción local' },
-      { symbol: 'TGSU2.BA', name: 'Transportadora de Gas del Sur', type: 'Acción local' },
-      { symbol: 'BMA.BA', name: 'Banco Macro', type: 'Acción local' },
-      { symbol: 'SUPV.BA', name: 'Grupo Supervielle', type: 'Acción local' },
-      { symbol: 'CRES.BA', name: 'Cresud', type: 'Acción local' },
-      { symbol: 'LOMA.BA', name: 'Loma Negra', type: 'Acción local' },
-      { symbol: 'HARG.BA', name: 'H.Argentina', type: 'Acción local' },
-      { symbol: 'TECO2.BA', name: 'Telecom Argentina', type: 'Acción local' }
+      { symbol: 'GGAL.BA', name: 'Grupo Financiero Galicia', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'YPFD.BA', name: 'YPF', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'PAMP.BA', name: 'Pampa Energía', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'TXAR.BA', name: 'Ternium Argentina', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'ALUA.BA', name: 'Aluar', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'COME.BA', name: 'Sociedad Comercial del Plata', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'MIRG.BA', name: 'Mirgor', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'BYMA.BA', name: 'BYMA', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'CEPU.BA', name: 'Central Puerto', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'TGSU2.BA', name: 'Transportadora de Gas del Sur', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'BMA.BA', name: 'Banco Macro', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'SUPV.BA', name: 'Grupo Supervielle', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'CRES.BA', name: 'Cresud', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'LOMA.BA', name: 'Loma Negra', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'HARG.BA', name: 'H.Argentina', type: 'Acción local', currency: 'ARS' },
+      { symbol: 'TECO2.BA', name: 'Telecom Argentina', type: 'Acción local', currency: 'ARS' }
     ],
     adrs: [
-      { symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'ADR' },
-      { symbol: 'YPF', name: 'YPF', type: 'ADR' },
-      { symbol: 'PAM', name: 'Pampa Energía', type: 'ADR' },
-      { symbol: 'TGS', name: 'Transportadora de Gas del Sur', type: 'ADR' },
-      { symbol: 'BMA', name: 'Banco Macro', type: 'ADR' },
-      { symbol: 'BBAR', name: 'BBVA Argentina', type: 'ADR' },
-      { symbol: 'CEPU', name: 'Central Puerto', type: 'ADR' },
-      { symbol: 'CRESY', name: 'Cresud', type: 'ADR' },
-      { symbol: 'LOMA', name: 'Loma Negra', type: 'ADR' },
-      { symbol: 'SUPV', name: 'Grupo Supervielle', type: 'ADR' }
+      { symbol: 'GGAL', name: 'Grupo Financiero Galicia', type: 'ADR', currency: 'USD' },
+      { symbol: 'YPF', name: 'YPF', type: 'ADR', currency: 'USD' },
+      { symbol: 'PAM', name: 'Pampa Energía', type: 'ADR', currency: 'USD' },
+      { symbol: 'TGS', name: 'Transportadora de Gas del Sur', type: 'ADR', currency: 'USD' },
+      { symbol: 'BMA', name: 'Banco Macro', type: 'ADR', currency: 'USD' },
+      { symbol: 'BBAR', name: 'BBVA Argentina', type: 'ADR', currency: 'USD' },
+      { symbol: 'CEPU', name: 'Central Puerto', type: 'ADR', currency: 'USD' },
+      { symbol: 'CRESY', name: 'Cresud', type: 'ADR', currency: 'USD' },
+      { symbol: 'LOMA', name: 'Loma Negra', type: 'ADR', currency: 'USD' },
+      { symbol: 'SUPV', name: 'Grupo Supervielle', type: 'ADR', currency: 'USD' }
     ],
+    // Metadatos estructurales de cada bono (moneda, legislación y vencimiento
+    // aproximado según convención de mercado). El cupón, la TIR y la duration
+    // dependen de cotizaciones de mercado en tiempo real que esta app no posee;
+    // se muestran como 'N/D' en la interfaz en lugar de inventarse.
     bonds: [
-      { symbol: 'AL30.BA', name: 'Bonar 2030', type: 'Bono' },
-      { symbol: 'GD30.BA', name: 'Global 2030', type: 'Bono' },
-      { symbol: 'AL35.BA', name: 'Bonar 2035', type: 'Bono' },
-      { symbol: 'GD35.BA', name: 'Global 2035', type: 'Bono' },
-      { symbol: 'AE38.BA', name: 'Global 2038', type: 'Bono' },
-      { symbol: 'AL41.BA', name: 'Bonar 2041', type: 'Bono' },
-      { symbol: 'TZX26.BA', name: 'Boncer 2026', type: 'Bono CER' },
-      { symbol: 'AL29.BA', name: 'Bonar 2029', type: 'Bono' },
-      { symbol: 'GD38.BA', name: 'Global 2038', type: 'Bono' },
-      { symbol: 'GD41.BA', name: 'Global 2041', type: 'Bono' },
-      { symbol: 'GD46.BA', name: 'Global 2046', type: 'Bono' },
-      { symbol: 'TZX27.BA', name: 'Boncer 2027', type: 'Bono CER' },
-      { symbol: 'TX28.BA', name: 'Boncer 2028', type: 'Bono CER' },
-      { symbol: 'S31O6.BA', name: 'Lecap octubre 2026', type: 'Bono tasa fija' }
+      { symbol: 'AL30.BA', name: 'Bonar 2030', type: 'Bono', currency: 'USD', law: 'Legislación argentina', maturityYear: 2030, couponRate: null, tir: null, duration: null },
+      { symbol: 'GD30.BA', name: 'Global 2030', type: 'Bono', currency: 'USD', law: 'Legislación extranjera', maturityYear: 2030, couponRate: null, tir: null, duration: null },
+      { symbol: 'AL35.BA', name: 'Bonar 2035', type: 'Bono', currency: 'USD', law: 'Legislación argentina', maturityYear: 2035, couponRate: null, tir: null, duration: null },
+      { symbol: 'GD35.BA', name: 'Global 2035', type: 'Bono', currency: 'USD', law: 'Legislación extranjera', maturityYear: 2035, couponRate: null, tir: null, duration: null },
+      { symbol: 'AE38.BA', name: 'Global 2038', type: 'Bono', currency: 'USD', law: 'Legislación extranjera', maturityYear: 2038, couponRate: null, tir: null, duration: null },
+      { symbol: 'AL41.BA', name: 'Bonar 2041', type: 'Bono', currency: 'USD', law: 'Legislación argentina', maturityYear: 2041, couponRate: null, tir: null, duration: null },
+      { symbol: 'TZX26.BA', name: 'Boncer 2026', type: 'Bono CER', currency: 'ARS', law: 'Legislación argentina', maturityYear: 2026, couponRate: null, tir: null, duration: null },
+      { symbol: 'AL29.BA', name: 'Bonar 2029', type: 'Bono', currency: 'USD', law: 'Legislación argentina', maturityYear: 2029, couponRate: null, tir: null, duration: null },
+      { symbol: 'GD38.BA', name: 'Global 2038', type: 'Bono', currency: 'USD', law: 'Legislación extranjera', maturityYear: 2038, couponRate: null, tir: null, duration: null },
+      { symbol: 'GD41.BA', name: 'Global 2041', type: 'Bono', currency: 'USD', law: 'Legislación extranjera', maturityYear: 2041, couponRate: null, tir: null, duration: null },
+      { symbol: 'GD46.BA', name: 'Global 2046', type: 'Bono', currency: 'USD', law: 'Legislación extranjera', maturityYear: 2046, couponRate: null, tir: null, duration: null },
+      { symbol: 'TZX27.BA', name: 'Boncer 2027', type: 'Bono CER', currency: 'ARS', law: 'Legislación argentina', maturityYear: 2027, couponRate: null, tir: null, duration: null },
+      { symbol: 'TX28.BA', name: 'Boncer 2028', type: 'Bono CER', currency: 'ARS', law: 'Legislación argentina', maturityYear: 2028, couponRate: null, tir: null, duration: null },
+      { symbol: 'S31O6.BA', name: 'Lecap octubre 2026', type: 'Bono tasa fija', currency: 'ARS', law: 'Legislación argentina', maturityYear: 2026, couponRate: null, tir: null, duration: null }
     ],
     macro: [
       { symbol: 'ARS=X', name: 'Peso argentino / dólar', type: 'Tipo de cambio' },

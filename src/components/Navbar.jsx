@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignOut }) {
+  const [menuOpen, setMenuOpen] = useState(false)
   const navItems = [
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'center', label: '💼 Centro de inversión' },
@@ -19,7 +20,8 @@ export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignO
           <h1 className="text-lg lg:text-xl font-semibold tracking-tight text-white whitespace-nowrap">
             <span className="text-cyan-400">◆</span> Capitales
           </h1>
-          {onSignOut && (
+          <div className="flex items-center gap-2">
+            {onSignOut && (
             <div className="flex items-center gap-3 text-sm">
               <span className="hidden md:inline text-slate-400">{userEmail}</span>
               <button
@@ -29,13 +31,26 @@ export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignO
                 Cerrar sesión
               </button>
             </div>
-          )}
+            )}
+            <button
+              type="button"
+              aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(open => !open)}
+              className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800"
+            >
+              <span aria-hidden="true" className="text-lg">{menuOpen ? '×' : '☰'}</span>
+            </button>
+          </div>
         </div>
-        <div className="flex gap-1.5 overflow-x-auto pt-3 scrollbar-thin">
+        <div className={`${menuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row gap-1.5 overflow-x-auto pt-3 scrollbar-thin`}>
           {navItems.map(item => (
             <button
               key={item.id}
-              onClick={() => setCurrentPage(item.id)}
+              onClick={() => {
+                setCurrentPage(item.id)
+                setMenuOpen(false)
+              }}
               className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                 currentPage === item.id
                   ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'

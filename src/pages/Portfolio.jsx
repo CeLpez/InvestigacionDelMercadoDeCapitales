@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { usePortfolioStore } from '../store/index'
 import { mockStocks, stockService } from '../services/stockService'
 import { exportPortfolioToCSV } from '../services/exportService'
@@ -13,6 +13,45 @@ export default function Portfolio() {
   const [purchasePrice, setPurchasePrice] = useState('')
   const [searching, setSearching] = useState(false)
   const [formError, setFormError] = useState('')
+  const [quotesLoading, setQuotesLoading] = useState(false)
+  const [quotesError, setQuotesError] = useState('')
+
+  useEffect(() => {
+    if (!portfolio.length) return undefined
+    let cancelled = false
+    setQuotesLoading(true)
+    setQuotesError('')
+    stockService.getMultipleStocks([...new Set(portfolio.map(stock => stock.symbol))])
+      .then(quotes => {
+        if (cancelled) return
+        if (quotes.length === 0) {
+          setQuotesError('No se pudieron actualizar las cotizaciones; se conservan los últimos precios.')
+          return
+        }
+        const bySymbol = Object.fromEntries(quotes.map(quote => [quote.symbol, quote]))
+        portfolio.forEach(stock => {
+          const quote = bySymbol[stock.symbol]
+          if (quote && Number.isFinite(quote.price) && quote.price !== stock.price) {
+            updateStock(stock.id, {
+              price: quote.price,
+              change: quote.change,
+              changePercent: quote.changePercent,
+              currency: quote.currency,
+              sector: quote.sector || stock.sector
+            })
+          }
+        })
+      })
+      .catch(error => {
+        if (!cancelled) setQuotesError(error.message || 'No se pudieron actualizar las cotizaciones.')
+      })
+      .finally(() => {
+        if (!cancelled) setQuotesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [portfolio.length])
 
   const searchStocks = async () => {
     const query = searchTerm.trim()
@@ -74,10 +113,23 @@ export default function Portfolio() {
     exportPortfolioToCSV(portfolio, `portafolio-${new Date().toISOString().split('T')[0]}.csv`)
   }
 
-  const totalValue = portfolio.reduce((sum, s) => sum + (s.price * s.quantity), 0)
-  const totalCost = portfolio.reduce((sum, s) => sum + (s.purchasePrice * s.quantity), 0)
+  const totalValue = portfolio.reduce((sum, s) => sum + ((Number(s.price) || 0) * (Number(s.quantity) || 0)), 0)
+  const totalCost = portfolio.reduce((sum, s) => sum + ((Number(s.purchasePrice) || 0) * (Number(s.quantity) || 0)), 0)
   const totalGain = totalValue - totalCost
   const gainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0
+  const distribution = useMemo(() => {
+    const aggregate = (key, fallback) => portfolio.reduce((result, stock) => {
+      const label = stock[key] || fallback
+      const value = (Number(stock.price) || 0) * (Number(stock.quantity) || 0)
+      result[label] = (result[label] || 0) + value
+      return result
+    }, {})
+    return {
+      sector: Object.entries(aggregate('sector', 'Sin sector')).sort((a, b) => b[1] - a[1]),
+      currency: Object.entries(aggregate('currency', 'Moneda no informada')).sort((a, b) => b[1] - a[1])
+    }
+  }, [portfolio])
+  const formatDistribution = (value) => totalValue > 0 ? `${((value / totalValue) * 100).toFixed(1)}%` : '0%'
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -100,6 +152,12 @@ export default function Portfolio() {
           </button>
         </div>
       </div>
+      {(quotesLoading || quotesError) && (
+        <div className="mb-4">
+          {quotesLoading && <p className="text-sm text-slate-400">Actualizando precios de tus posiciones...</p>}
+          {quotesError && <p className="text-sm text-amber-400">{quotesError}</p>}
+        </div>
+      )}
 
       {/* Resumen del portafolio */}
       <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -107,6 +165,7 @@ export default function Portfolio() {
           <p className="text-slate-400 text-sm">Valor Total</p>
           <p className="text-3xl font-bold text-blue-400">${totalValue.toFixed(2)}</p>
         </div>
+
         <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-6">
           <p className="text-slate-400 text-sm">Costo Total</p>
           <p className="text-3xl font-bold">${totalCost.toFixed(2)}</p>
@@ -124,6 +183,32 @@ export default function Portfolio() {
           </p>
         </div>
       </div>
+
+      {portfolio.length > 0 && (
+        <div className="grid lg:grid-cols-2 gap-4 mb-8">
+          {[
+            ['Distribución por sector', distribution.sector],
+            ['Distribución por moneda', distribution.currency]
+          ].map(([title, entries]) => (
+            <section key={title} className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl p-5">
+              <h3 className="font-semibold text-white mb-4">{title}</h3>
+              <div className="space-y-3">
+                {entries.length ? entries.map(([label, value]) => (
+                  <div key={label}>
+                    <div className="flex justify-between gap-3 text-sm mb-1">
+                      <span className="text-slate-300 truncate">{label}</span>
+                      <span className="text-slate-400">{formatDistribution(value)} · ${value.toFixed(2)}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                      <div className="h-full rounded-full bg-cyan-400" style={{ width: `${totalValue ? (value / totalValue) * 100 : 0}%` }} />
+                    </div>
+                  </div>
+                )) : <p className="text-sm text-slate-500">No hay datos suficientes.</p>}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
 
       {/* Formulario para agregar acción */}
       {showAddForm && (
@@ -184,8 +269,8 @@ export default function Portfolio() {
 
       {/* Lista de acciones en portafolio */}
       {portfolio.length > 0 ? (
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl overflow-hidden">
-          <table className="w-full">
+        <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-xl overflow-x-auto">
+          <table className="w-full min-w-[820px]">
             <thead>
               <tr className="bg-slate-900/50 border-b border-slate-700">
                 <th className="px-6 py-3 text-left font-bold">Acción</th>
@@ -214,7 +299,7 @@ export default function Portfolio() {
                       <input
                         type="number"
                         value={stock.quantity}
-                        onChange={(e) => updateStock(stock.id, { quantity: parseInt(e.target.value) })}
+                        onChange={(e) => updateStock(stock.id, { quantity: Number(e.target.value) })}
                         className="w-20 px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white"
                         min="1"
                       />

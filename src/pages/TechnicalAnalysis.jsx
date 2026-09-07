@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Line, Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -23,6 +23,9 @@ export default function TechnicalAnalysis() {
   const [technicalIndicators, setTechnicalIndicators] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [fundamentalLoading, setFundamentalLoading] = useState(false)
+  const [fundamentalError, setFundamentalError] = useState('')
+  const requestId = useRef(0)
 
   const timeframes = [
     { label: '1D', value: '1d' },
@@ -35,8 +38,10 @@ export default function TechnicalAnalysis() {
 
   const fetchAnalysisData = async (sym, tf) => {
     if (!sym) return
+    const currentRequest = ++requestId.current
     setLoading(true)
     setError(null)
+    setFundamentalError('')
     setChartData(null)
     setFundamentals(null)
     try {
@@ -115,12 +120,17 @@ export default function TechnicalAnalysis() {
       setTechnicalIndicators(indicators)
 
       // Obtener datos fundamentales
+      setLoading(false)
+      setFundamentalLoading(true)
       const profile = await stockService.getCompanyProfile(sym)
+      if (currentRequest !== requestId.current) return
       setFundamentals(profile)
+      if (!profile) setFundamentalError('Los datos fundamentales no están disponibles para este símbolo.')
     } catch (err) {
       console.error('Error al cargar datos:', err)
       setError(`No se pudieron cargar los datos de ${sym}. Comprueba el ticker e inténtalo nuevamente.`)
     } finally {
+      setFundamentalLoading(false)
       setLoading(false)
     }
   }
@@ -130,7 +140,7 @@ export default function TechnicalAnalysis() {
 
     const latest = closes[closes.length - 1]
     const previous = closes[Math.max(0, closes.length - 2)]
-    const change = ((latest - previous) / previous) * 100
+    const change = previous ? ((latest - previous) / previous) * 100 : 0
 
     // Media móvil 20
     const ma20 = closes.length >= 20
@@ -161,17 +171,13 @@ export default function TechnicalAnalysis() {
     const variance = closes.reduce((a, c) => a + Math.pow(c - mean, 2), 0) / closes.length
     const volatility = Math.sqrt(variance)
 
-    // RSI (14 períodos simplificado)
+    // RSI (14 períodos, usando únicamente la ventana más reciente).
     let rsi = 50
     if (closes.length >= 14) {
-      const changes = []
-      for (let i = 1; i < closes.length; i++) {
-        changes.push(closes[i] - closes[i - 1])
-      }
-      const gains = changes.filter(c => c > 0).reduce((a, b) => a + b, 0) / 14
-      const losses = Math.abs(changes.filter(c => c < 0).reduce((a, b) => a + b, 0)) / 14
-      const rs = gains / Math.max(losses, 0.01)
-      rsi = 100 - (100 / (1 + rs))
+      const changes = closes.slice(-15).slice(1).map((value, index) => value - closes.slice(-15)[index])
+      const gains = changes.filter(c => c > 0).reduce((a, b) => a + b, 0) / changes.length
+      const losses = Math.abs(changes.filter(c => c < 0).reduce((a, b) => a + b, 0)) / changes.length
+      rsi = losses === 0 ? 100 : 100 - (100 / (1 + (gains / losses)))
     }
 
     // MACD (12, 26, 9) y señal
@@ -188,6 +194,13 @@ export default function TechnicalAnalysis() {
     const ema12 = ema(closes, 12)
     const ema26 = ema(closes, 26)
     const macd = ema12 !== null && ema26 !== null ? ema12 - ema26 : null
+    const macdValues = closes.map((_, index) => {
+      const values = closes.slice(0, index + 1)
+      const short = ema(values, 12)
+      const long = ema(values, 26)
+      return short !== null && long !== null ? short - long : null
+    }).filter(value => value !== null)
+    const macdSignal = macdValues.length >= 9 ? ema(macdValues, 9) : null
 
     // Tendencia
     const trend = ma20 && latest > ma20 ? '↑ Alcista' : '↓ Bajista'
@@ -205,6 +218,8 @@ export default function TechnicalAnalysis() {
       volatility: volatility.toFixed(2),
       rsi: rsi.toFixed(1),
       macd: macd?.toFixed(2),
+      macdSignal: macdSignal?.toFixed(2),
+      macdHistogram: macd !== null && macdSignal !== null ? (macd - macdSignal).toFixed(2) : null,
       trend,
       trendColor
     }
@@ -318,7 +333,7 @@ export default function TechnicalAnalysis() {
               <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
                 <p className="text-slate-400 text-sm">MACD (12,26)</p>
                 <p className="text-2xl font-bold text-white">{technicalIndicators.macd ?? 'N/D'}</p>
-                <p className="text-slate-400 text-xs mt-1">Momentum</p>
+                <p className="text-slate-400 text-xs mt-1">Señal: {technicalIndicators.macdSignal ?? 'N/D'}</p>
               </div>
             </div>
 
@@ -474,6 +489,16 @@ export default function TechnicalAnalysis() {
             )}
 
             {/* Análisis Fundamental */}
+            {fundamentalLoading && (
+              <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-6 text-slate-400">
+                Cargando datos fundamentales...
+              </div>
+            )}
+            {fundamentalError && !fundamentalLoading && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6 text-amber-300">
+                {fundamentalError}
+              </div>
+            )}
             {fundamentals && (
               <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-6">
                 <h3 className="text-white font-semibold mb-4">📈 Análisis Fundamental (Largo Plazo)</h3>
