@@ -172,6 +172,17 @@ El proyecto incluye la función serverless `api/yahoo/[...path].js`, que consult
 
 Después del despliegue, comparte la URL pública de Vercel. Los usuarios podrán acceder desde cualquier red o celular. No publiques `.env.local` ni claves secretas; la clave `VITE_SUPABASE_ANON_KEY` está diseñada para usarse en el navegador, pero las políticas RLS de Supabase deben permanecer activas.
 
+### Consulta de cartera de InvertirOnline
+
+La pestaña **IOL** del Centro de inversión consulta la cartera en modo solo lectura mediante `api/iol/portfolio.js`. Para habilitarla, la cuenta debe tener las APIs activadas y hay que configurar en Vercel, como variables privadas (sin prefijo `VITE_`):
+
+- `IOL_USERNAME`
+- `IOL_PASSWORD` o `IOL_REFRESH_TOKEN`
+- `IOL_ACCOUNT`
+- `IOL_COUNTRY` (por defecto, `Argentina`)
+
+Las credenciales nunca llegan al navegador. La aplicación no envía órdenes de compra, venta ni cancelación. Para probar funciones serverless localmente se recomienda `vercel dev`; `npm run dev` solo sirve el frontend y el proxy de Yahoo.
+
 ## 🚀 Próximas Características Potenciales
 
 - Integración con APIs reales (Yahoo Finance, Polygon.io)

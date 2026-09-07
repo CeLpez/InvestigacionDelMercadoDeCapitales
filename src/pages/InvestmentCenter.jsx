@@ -8,6 +8,7 @@ const StockSearch = lazy(() => import('./StockSearch'))
 const TransactionHistory = lazy(() => import('./TransactionHistory'))
 const SectorAnalysis = lazy(() => import('./SectorAnalysis'))
 const CompetitorComparison = lazy(() => import('./CompetitorComparison'))
+const IolPortfolio = lazy(() => import('../components/IolPortfolio'))
 
 const tabs = [
   ['portfolio', 'Mi portafolio'],
@@ -15,7 +16,8 @@ const tabs = [
   ['companies', 'Empresas'],
   ['sectors', 'Sectores y pares'],
   ['comparison', 'Comparar'],
-  ['history', 'Historial']
+  ['history', 'Historial'],
+  ['iol', 'IOL']
 ]
 
 export default function InvestmentCenter() {
@@ -26,7 +28,8 @@ export default function InvestmentCenter() {
     companies: <StockSearch />,
     sectors: <SectorAnalysis />,
     comparison: <CompetitorComparison />,
-    history: <TransactionHistory />
+    history: <TransactionHistory />,
+    iol: <IolPortfolio />
   }
 
   return (
