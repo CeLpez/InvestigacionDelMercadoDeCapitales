@@ -158,6 +158,20 @@ Con Zustand puedes:
 
 El cliente de Supabase queda disponible en `src/services/supabaseClient.js` y las operaciones de autenticación en `src/services/authService.js`. Si las variables están vacías, la aplicación continúa funcionando con persistencia local.
 
+## 🌐 Publicar en Vercel
+
+El proyecto incluye la función serverless `api/yahoo/[...path].js`, que consulta Yahoo Finance desde el servidor y evita problemas de CORS cuando la aplicación está publicada.
+
+1. Sube el repositorio a GitHub.
+2. Entra en [vercel.com](https://vercel.com), selecciona **Add New Project** e importa el repositorio.
+3. Mantén `Framework Preset: Vite`, `Build Command: npm run build` y `Output Directory: dist`.
+4. En **Settings → Environment Variables**, agrega:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+5. Pulsa **Deploy**.
+
+Después del despliegue, comparte la URL pública de Vercel. Los usuarios podrán acceder desde cualquier red o celular. No publiques `.env.local` ni claves secretas; la clave `VITE_SUPABASE_ANON_KEY` está diseñada para usarse en el navegador, pero las políticas RLS de Supabase deben permanecer activas.
+
 ## 🚀 Próximas Características Potenciales
 
 - Integración con APIs reales (Yahoo Finance, Polygon.io)

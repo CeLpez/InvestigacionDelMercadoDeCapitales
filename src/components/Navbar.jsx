@@ -4,9 +4,10 @@ export default function Navbar({ currentPage, setCurrentPage, userEmail, onSignO
   const navItems = [
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'center', label: '💼 Centro de inversión' },
+    { id: 'analysis', label: '📈 Análisis' },
     { id: 'education', label: '📚 Educación' },
     { id: 'alerts', label: '🔔 Alertas' },
-    { id: 'simulator', label: '📈 Simulador' },
+    { id: 'simulator', label: '🎮 Simulador' },
     { id: 'news', label: '📰 Noticias' },
     { id: 'recommendations', label: '💡 Recomendaciones' }
   ]

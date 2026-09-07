@@ -13,6 +13,7 @@ import PriceAlerts from './pages/PriceAlerts'
 import TransactionHistory from './pages/TransactionHistory'
 import ReturnSimulator from './pages/ReturnSimulator'
 import FinancialNews from './pages/FinancialNews'
+import TechnicalAnalysis from './pages/TechnicalAnalysis'
 import Auth from './pages/Auth'
 import { authService } from './services/authService'
 import { isSupabaseConfigured } from './services/supabaseClient'
@@ -54,7 +55,8 @@ export default function App() {
     alerts: <PriceAlerts />,
     history: <TransactionHistory />,
     simulator: <ReturnSimulator />,
-    news: <FinancialNews />
+    news: <FinancialNews />,
+    analysis: <TechnicalAnalysis />
   }
 
   if (authLoading) {

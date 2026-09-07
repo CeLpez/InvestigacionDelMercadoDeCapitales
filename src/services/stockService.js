@@ -1,7 +1,9 @@
 import axios from 'axios'
 
 // Yahoo Finance - usando fuentes públicas sin API key
-const API_BASE = 'https://query1.finance.yahoo.com'
+// La misma ruta funciona con el proxy de Vite en desarrollo y con la función
+// serverless de Vercel en producción.
+const API_BASE = '/api/yahoo'
 
 export const stockService = {
   async getStockData(symbol) {
@@ -79,23 +81,29 @@ export const stockService = {
   },
 
   async getHistoricalData(symbol, interval = '1d', range = '1y') {
-    try {
-      const response = await axios.get(
-        `${API_BASE}/v8/finance/chart/${symbol}`,
-        {
-          params: {
-            interval,
-            range
+    const hosts = [API_BASE]
+    let lastError
+
+    for (const host of hosts) {
+      try {
+        const response = await axios.get(
+          `${host}/v8/finance/chart/${encodeURIComponent(symbol)}`,
+          {
+            params: { interval, range },
+            timeout: 15000,
+            headers: { Accept: 'application/json' }
           }
-        }
-      )
-      const result = response.data.chart.result?.[0]
-      if (!result) throw new Error(`No historical data for ${symbol}`)
-      return result
-    } catch (error) {
-      console.error('Error fetching historical data:', error)
-      throw error
+        )
+        const result = response.data.chart.result?.[0]
+        if (!result) throw new Error(`No historical data for ${symbol}`)
+        return result
+      } catch (error) {
+        lastError = error
+      }
     }
+
+    console.error('Error fetching historical data:', lastError)
+    throw lastError
   },
 
   async searchSymbol(query) {
